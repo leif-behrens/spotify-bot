@@ -188,6 +188,23 @@ class SecureDashboard:
                     'error_count': min(status.get('error_count', 0), 999)  # Limit exposed error count
                 }
                 
+                # Watchdog-Status hinzufügen falls verfügbar
+                if self.monitoring_service and self.monitoring_service.watchdog:
+                    try:
+                        watchdog_stats = self.monitoring_service.watchdog.get_statistics()
+                        health_status = self.monitoring_service.watchdog.get_health_status()
+                        
+                        safe_status['watchdog'] = {
+                            'is_active': watchdog_stats.get('is_running', False),
+                            'is_healthy': health_status.is_healthy,
+                            'restart_count': min(watchdog_stats.get('restart_count', 0), 999),
+                            'availability_percent': round(watchdog_stats.get('availability_percent', 0), 1),
+                            'consecutive_failures': min(health_status.consecutive_failures, 99)
+                        }
+                    except Exception as e:
+                        logger.debug(f"Watchdog status not available: {e}")
+                        safe_status['watchdog'] = {'is_active': False}
+                
                 if status.get('current_track'):
                     safe_status['current_track'] = {
                         'name': self._sanitize_input(status['current_track'].get('name', '')),

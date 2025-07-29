@@ -82,6 +82,9 @@ class SpotifyMonitoringService:
         
         # Callbacks für Events
         self.on_track_added_callback: Optional[Callable] = None
+        
+        # Service Watchdog (wird bei Bedarf initialisiert)
+        self.watchdog: Optional['ServiceWatchdog'] = None
     
     def _init_scheduler(self) -> None:
         """
@@ -132,6 +135,148 @@ class SpotifyMonitoringService:
             self._safe_shutdown_scheduler()
         except Exception:
             pass  # Ignore errors in destructor
+    
+    def _refresh_access_token(self) -> bool:
+        """
+        Versucht Access Token zu refreshen
+        CWE-287: Proper Authentication, CWE-754: Error Handling
+        """
+        try:
+            if not self.authenticator:
+                return False
+            
+            # Versuche Token mit SpotifyAuthenticator zu refreshen
+            if self.authenticator.authenticate_from_stored_token():
+                # Update Spotify Client mit neuem Token
+                self.spotify_client = self.authenticator.spotify
+                logger.info("Access token successfully refreshed")
+                return True
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"Token refresh failed: {e}")
+            return False
+    
+    def _handle_authentication_failure(self) -> None:
+        """
+        Behandelt dauerhafte Authentifizierungs-Fehler
+        CWE-754: Graceful Degradation
+        """
+        try:
+            logger.warning("Service stopping due to authentication failure")
+            
+            # Service-Status zurücksetzen aber nicht komplett stoppen
+            # Benutzer kann manuell neu authentifizieren
+            self.is_running = False
+            
+            # Statistik für Dashboard-Anzeige
+            self.statistics_db.record_metric(
+                'authentication_failure', 
+                'token_refresh_failed',
+                {'session_id': self.session_id, 'error_count': self.error_count}
+            )
+            
+            # Aktuelle Session beenden
+            with self._lock:
+                if self.current_session:
+                    self._end_current_session()
+            
+            logger.info("Service paused - manual re-authentication required")
+            
+        except Exception as e:
+            logger.error(f"Error handling authentication failure: {e}")
+    
+    def _start_watchdog(self) -> None:
+        """
+        Startet Service Watchdog für automatische Überwachung
+        CWE-400: Resource Management, CWE-754: Error Handling
+        """
+        try:
+            from service_watchdog import ServiceWatchdog
+            
+            if self.watchdog and self.watchdog.is_running:
+                logger.debug("Watchdog already running")
+                return
+            
+            # Konfiguration aus Service Config
+            check_interval = self.service_config.get('health_check_interval_seconds', 30)
+            max_failures = self.service_config.get('max_health_failures', 3)
+            restart_delay = self.service_config.get('restart_delay_seconds', 60)
+            
+            # Erstelle und starte Watchdog
+            self.watchdog = ServiceWatchdog(
+                service_instance=self,
+                check_interval_seconds=check_interval,
+                max_failures=max_failures,
+                restart_delay_seconds=restart_delay
+            )
+            
+            # Callbacks für Watchdog-Events
+            self.watchdog.on_service_restart = self._on_watchdog_restart
+            self.watchdog.on_health_change = self._on_health_change
+            
+            self.watchdog.start()
+            logger.info("Service Watchdog started for automatic monitoring")
+            
+        except Exception as e:
+            logger.error(f"Failed to start watchdog: {e}")
+    
+    def _stop_watchdog(self) -> None:
+        """
+        Stoppt Service Watchdog
+        CWE-772: Proper Resource Release
+        """
+        try:
+            if self.watchdog and self.watchdog.is_running:
+                logger.debug("Stopping Service Watchdog...")
+                self.watchdog.stop()
+                self.watchdog = None
+                logger.info("Service Watchdog stopped")
+                
+        except Exception as e:
+            logger.error(f"Error stopping watchdog: {e}")
+    
+    def _on_watchdog_restart(self, restart_count: int, downtime_seconds: int) -> None:
+        """
+        Callback für Watchdog-Service-Restarts
+        CWE-778: Insufficient Logging
+        """
+        try:
+            logger.info(f"Service auto-restarted by watchdog (#{restart_count}, downtime: {downtime_seconds}s)")
+            
+            # Statistik für Dashboard
+            self.statistics_db.record_metric(
+                'watchdog_service_restart',
+                'success',
+                {
+                    'restart_count': restart_count,
+                    'downtime_seconds': downtime_seconds,
+                    'session_id': self.session_id
+                }
+            )
+            
+        except Exception as e:
+            logger.error(f"Error in watchdog restart callback: {e}")
+    
+    def _on_health_change(self, is_healthy: bool) -> None:
+        """
+        Callback für Health Status Änderungen  
+        CWE-778: Insufficient Logging
+        """
+        try:
+            status = "healthy" if is_healthy else "unhealthy"
+            logger.info(f"Service health status changed: {status}")
+            
+            # Statistik für Dashboard
+            self.statistics_db.record_metric(
+                'service_health_change',
+                status,
+                {'session_id': self.session_id}
+            )
+            
+        except Exception as e:
+            logger.error(f"Error in health change callback: {e}")
         
     def _job_listener(self, event) -> None:
         """
@@ -269,6 +414,9 @@ class SpotifyMonitoringService:
                 
                 self.is_running = True
                 
+                # Starte Watchdog für automatische Überwachung
+                self._start_watchdog()
+                
                 logger.info(f"Monitoring service started (Check interval: {check_interval}s)")
                 self.statistics_db.record_metric('service_started', 'success', {'session_id': self.session_id})
                 
@@ -335,6 +483,9 @@ class SpotifyMonitoringService:
                 
                 self.is_running = True
                 
+                # Starte Watchdog für automatische Überwachung
+                self._start_watchdog()
+                
                 logger.info(f"Monitoring service started from stored token (Check interval: {check_interval}s)")
                 self.statistics_db.record_metric('service_started_from_token', 'success', {'session_id': self.session_id})
                 
@@ -361,6 +512,9 @@ class SpotifyMonitoringService:
             with self._lock:
                 if self.current_session:
                     self._end_current_session()
+            
+            # Watchdog stoppen
+            self._stop_watchdog()
             
             # Scheduler sicher stoppen
             self._safe_shutdown_scheduler()
@@ -433,10 +587,23 @@ class SpotifyMonitoringService:
                 self.error_count = 0
                 
         except spotipy.SpotifyException as e:
+            # CWE-287: Improper Authentication - Handle expired tokens
+            if e.http_status == 401:  # Unauthorized - Token expired
+                logger.warning("Access token expired, attempting refresh...")
+                if self._refresh_access_token():
+                    logger.info("Token refreshed successfully, monitoring will continue")
+                    # Reset error count bei erfolgreichem Token-Refresh
+                    self.error_count = max(0, self.error_count - 5)
+                    return  # Versuche nicht als Fehler zu zählen
+                else:
+                    logger.error("Token refresh failed - service needs re-authentication")
+                    self._handle_authentication_failure()
+                    return
+            
             self.error_count += 1
             logger.error(f"Spotify API error during monitoring: {e}")
             
-            # Rate Limiting - warte länger bei Fehlern
+            # Rate Limiting - warte länger bei Fehlern (CWE-400: DoS Prevention)
             if e.http_status == 429:  # Too Many Requests
                 retry_after = int(e.headers.get('Retry-After', 60))
                 logger.warning(f"Rate limited, waiting {retry_after} seconds")

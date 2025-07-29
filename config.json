@@ -8,8 +8,11 @@
     "description": "Automatisch hinzugefügte Songs basierend auf Hörverhalten"
   },
   "service": {
-    "max_retries": 3,
-    "retry_delay_seconds": 10
+    "max_retries": 10,
+    "retry_delay_seconds": 10,
+    "health_check_interval_seconds": 30,
+    "max_health_failures": 3,
+    "restart_delay_seconds": 60
   },
   "dashboard": {
     "refresh_interval_seconds": 5
