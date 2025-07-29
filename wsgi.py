@@ -34,6 +34,9 @@ def create_app():
         # Dashboard erstellen
         dashboard = SecureDashboard(config_manager, monitoring_service)
         
+        # Monitoring Service als App-Attribut verfügbar machen für Worker-Cleanup
+        dashboard.app.monitoring_service = monitoring_service
+        
         # Monitoring Service wird nur manuell über Dashboard gestartet
         # Automatischer Start entfernt um Container-Start-Probleme zu vermeiden
         logging.info("Dashboard ready - monitoring service can be started manually")

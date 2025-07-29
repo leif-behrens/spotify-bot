@@ -69,12 +69,11 @@ class SpotifyMonitoringService:
         self._lock = threading.Lock()
         self._start_lock = threading.Lock()  # Verhindert gleichzeitiges Starten
         
-        # Scheduler für periodische Tasks
-        self.scheduler = BackgroundScheduler(
-            timezone='Europe/Berlin',
-            max_workers=2  # CWE-400: Begrenzte Worker
-        )
-        self.scheduler.add_listener(self._job_listener, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
+        # Scheduler für periodische Tasks - robuste Konfiguration
+        self.scheduler = None
+        self._scheduler_running = False
+        self._shutdown_lock = threading.Lock()
+        self._init_scheduler()
         
         # Service State
         self.is_running = False
@@ -83,6 +82,56 @@ class SpotifyMonitoringService:
         
         # Callbacks für Events
         self.on_track_added_callback: Optional[Callable] = None
+    
+    def _init_scheduler(self) -> None:
+        """
+        Initialisiert APScheduler mit robuster Konfiguration
+        Verhindert ThreadPoolExecutor Shutdown-Errors bei Worker-Restarts
+        """
+        with self._shutdown_lock:
+            try:
+                # Cleanup alter Scheduler falls vorhanden
+                if self.scheduler and self._scheduler_running:
+                    self._safe_shutdown_scheduler()
+                
+                # Neuer Scheduler mit robuster Konfiguration
+                self.scheduler = BackgroundScheduler(
+                    timezone='Europe/Berlin',
+                    max_workers=2,  # CWE-400: Begrenzte Worker
+                    daemon=True  # Daemon-Threads für sauberen Shutdown
+                )
+                
+                # Event Listener für Job-Monitoring
+                self.scheduler.add_listener(self._job_listener, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
+                
+                logger.debug("APScheduler initialized successfully")
+                
+            except Exception as e:
+                logger.error(f"Failed to initialize scheduler: {e}")
+                raise
+    
+    def _safe_shutdown_scheduler(self) -> None:
+        """
+        Sicherer Scheduler-Shutdown ohne RuntimeError
+        """
+        try:
+            if self.scheduler and self._scheduler_running:
+                logger.debug("Shutting down APScheduler...")
+                self.scheduler.shutdown(wait=False)  # Nicht auf laufende Jobs warten
+                self._scheduler_running = False
+                logger.debug("APScheduler shutdown completed")
+        except Exception as e:
+            logger.warning(f"Scheduler shutdown error (ignored): {e}")
+            self._scheduler_running = False
+    
+    def __del__(self):
+        """
+        Destruktor - stellt sicher, dass Scheduler sauber beendet wird
+        """
+        try:
+            self._safe_shutdown_scheduler()
+        except Exception:
+            pass  # Ignore errors in destructor
         
     def _job_listener(self, event) -> None:
         """
@@ -213,7 +262,11 @@ class SpotifyMonitoringService:
                     max_instances=1
                 )
                 
-                self.scheduler.start()
+                # Starte Scheduler sicher
+                if not self._scheduler_running:
+                    self.scheduler.start()
+                    self._scheduler_running = True
+                
                 self.is_running = True
                 
                 logger.info(f"Monitoring service started (Check interval: {check_interval}s)")
@@ -275,7 +328,11 @@ class SpotifyMonitoringService:
                     max_instances=1
                 )
                 
-                self.scheduler.start()
+                # Starte Scheduler sicher
+                if not self._scheduler_running:
+                    self.scheduler.start()
+                    self._scheduler_running = True
+                
                 self.is_running = True
                 
                 logger.info(f"Monitoring service started from stored token (Check interval: {check_interval}s)")
@@ -305,9 +362,8 @@ class SpotifyMonitoringService:
                 if self.current_session:
                     self._end_current_session()
             
-            # Scheduler stoppen
-            if self.scheduler.running:
-                self.scheduler.shutdown(wait=True)
+            # Scheduler sicher stoppen
+            self._safe_shutdown_scheduler()
             
             self.is_running = False
             

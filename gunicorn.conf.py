@@ -69,6 +69,21 @@ def post_worker_init(worker):
     """Called just after a worker has initialized the application."""
     worker.log.info(f"Worker {worker.pid} initialized")
 
+def worker_exit(server, worker):
+    """Called just before a worker exits."""
+    worker.log.info(f"Worker {worker.pid} exiting - cleaning up resources")
+    
+    # Importiere und stoppe MonitoringService falls läuft
+    try:
+        from wsgi import app
+        if hasattr(app, 'monitoring_service'):
+            service = app.monitoring_service
+            if service and service.is_running:
+                worker.log.info("Stopping monitoring service before worker exit")
+                service.stop()
+    except Exception as e:
+        worker.log.warning(f"Error during worker cleanup: {e}")
+
 def worker_abort(worker):
     """Called when a worker receives a SIGABRT signal."""
     worker.log.info(f"Worker {worker.pid} received SIGABRT signal")
