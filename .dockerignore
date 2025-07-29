@@ -1,0 +1,98 @@
+# Docker Ignore File für Spotify Bot
+# Verhindert das Kopieren unnötiger Dateien in den Container
+
+# Git
+.git/
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+venv/
+env/
+.venv/
+.env/
+
+# Environment Files (sensitive)
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs und Daten (werden als Volumes gemountet)
+logs/
+data/
+*.log
+*.db
+*.sqlite
+*.sqlite3
+
+# Security Files
+*.key
+*.pem
+*.crt
+*.p12
+*.jks
+.spotify_token*
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Documentation
+*.md
+docs/
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Node modules (falls vorhanden)
+node_modules/
+
+# Scripts (werden separat kopiert)
+scripts/
+
+# Nginx Config (wird separat behandelt)
+nginx.conf

@@ -1,0 +1,113 @@
+/* Spotify Auto-Discovery Bot Dashboard Styles */
+
+:root {
+    --spotify-green: #1db954;
+    --spotify-green-light: #1ed760;
+    --spotify-dark: #191414;
+    --spotify-gray: #535353;
+    --background-light: #f8f9fa;
+}
+
+.bg-spotify {
+    background-color: var(--spotify-green) !important;
+}
+
+.text-spotify {
+    color: var(--spotify-green) !important;
+}
+
+.btn-spotify {
+    background-color: var(--spotify-green);
+    border-color: var(--spotify-green);
+    color: white;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn-spotify:hover {
+    background-color: var(--spotify-green-light);
+    border-color: var(--spotify-green-light);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(29, 185, 84, 0.3);
+}
+
+.btn-spotify:focus {
+    box-shadow: 0 0 0 0.2rem rgba(29, 185, 84, 0.25);
+}
+
+/* Loading Animation */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading {
+    animation: spin 1s linear infinite;
+}
+
+/* Pulse Animation for Status Indicator */
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 0.7;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.status-running {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+/* Custom Card Hover Effects */
+.metric-card:hover {
+    transform: translateY(-2px);
+    transition: transform 0.2s ease;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15) !important;
+}
+
+/* Chart Container */
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .metric-value {
+        font-size: 2rem !important;
+    }
+    
+    .current-track {
+        text-align: center;
+    }
+    
+    .card {
+        margin-bottom: 15px;
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #121212;
+        color: #ffffff;
+    }
+    
+    .card {
+        background-color: #1e1e1e;
+        color: #ffffff;
+    }
+    
+    .text-muted {
+        color: #b3b3b3 !important;
+    }
+}

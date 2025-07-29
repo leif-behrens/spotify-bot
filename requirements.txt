@@ -1,0 +1,29 @@
+# Spotify API Client - CWE-494: Download of Code Without Integrity Check mitigation
+spotipy==2.23.0
+
+# Task Scheduling - Secure background task execution
+APScheduler==3.10.4
+
+# Web Framework für Dashboard
+Flask==3.0.0
+Flask-SQLAlchemy==3.1.1
+
+# Database - SQLite3 ist bereits in Python eingebaut
+
+# Configuration validation - CWE-20: Improper Input Validation mitigation
+jsonschema==4.20.0
+
+# Security libraries
+cryptography>=42.0.0  # For secure token storage
+
+# Logging
+structlog==23.2.0
+
+# Environment variables - CWE-798: Use of Hard-coded Credentials mitigation
+python-dotenv==1.0.0
+
+# HTTP client with security features
+requests==2.31.0
+
+# WSGI Server für Production
+gunicorn==21.2.0

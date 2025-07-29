@@ -1,0 +1,17 @@
+{
+  "monitoring": {
+    "check_interval_seconds": 5,
+    "minimum_play_duration_seconds": 60
+  },
+  "playlist": {
+    "name": "AutoDiscovered Songs",
+    "description": "Automatisch hinzugefügte Songs basierend auf Hörverhalten"
+  },
+  "service": {
+    "max_retries": 3,
+    "retry_delay_seconds": 10
+  },
+  "dashboard": {
+    "refresh_interval_seconds": 5
+  }
+}

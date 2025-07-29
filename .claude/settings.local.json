@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(python:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(venvScripts:*)",
+      "Bash(pip install:*)",
+      "Bash(.venvScriptsactivate.bat)",
+      "Bash(timeout:*)",
+      "Bash(rm:*)",
+      "Bash(copy .env.docker .env)",
+      "Bash(cp:*)",
+      "Bash(docker-compose:*)",
+      "Bash(docker:*)",
+      "Bash(curl:*)",
+      "Bash(grep:*)"
+    ],
+    "deny": []
+  }
+}
