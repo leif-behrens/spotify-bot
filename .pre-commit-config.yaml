@@ -1,0 +1,71 @@
+# Pre-commit Hooks für DevSecOps
+# Diese Hooks laufen automatisch vor jedem Git-Commit
+# CWE-20: Input Validation durch Code-Quality checks
+
+repos:
+  # Built-in Hooks für grundlegende Sicherheit
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace        # Verhindert trailing whitespace
+      - id: end-of-file-fixer         # Stellt sicher, dass Dateien mit Newline enden
+      - id: check-yaml                # Validiert YAML Syntax
+      - id: check-json                # Validiert JSON Syntax
+      - id: check-added-large-files   # Verhindert große Dateien (>500KB)
+        args: ['--maxkb=500']
+      - id: check-case-conflict       # Verhindert Case-Sensitivity Probleme
+      - id: check-merge-conflict      # Findet Merge-Konflikt Marker
+      - id: debug-statements          # Findet debug/print Statements
+      - id: detect-private-key        # Findet private SSH Keys
+
+  # Python Code Formatting (CWE-141: Code Quality)
+  - repo: https://github.com/psf/black
+    rev: 23.12.1
+    hooks:
+      - id: black
+        language_version: python3
+        args: [--line-length=88]
+
+  # Import Sorting (Verhindert Dependency Confusion)
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: [--profile=black]
+
+  # Python Linting (Code Quality & Basic Security)
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        args: [--max-line-length=88, --extend-ignore=E203,W503,E501]
+
+  # Security Scanning mit Bandit (SAST)
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.5
+    hooks:
+      - id: bandit
+        args: [-c, pyproject.toml]
+        additional_dependencies: ["bandit[toml]"]
+
+  # Dependency Vulnerability Scanning (SCA)
+  - repo: https://github.com/Lucas-C/pre-commit-hooks-safety
+    rev: v1.3.2
+    hooks:
+      - id: python-safety-dependencies-check
+        files: requirements.*\.txt$
+
+  # Secret Detection
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: package.lock.json
+
+  # Semgrep Security Rules (Advanced SAST) - Entfernt wegen Windows Pfad-Limit
+  # - repo: https://github.com/returntocorp/semgrep
+  #   rev: v1.45.0
+  #   hooks:
+  #     - id: semgrep
+  #       args: ['--config=p/security-audit', '--config=p/python', '--error']

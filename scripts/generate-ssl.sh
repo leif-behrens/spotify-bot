@@ -13,7 +13,7 @@ CONFIG_FILE="$CERT_DIR/openssl.conf"
 # Prüfe ob Zertifikat bereits existiert und gültig ist
 if [ -f "$CERT_FILE" ] && [ -f "$KEY_FILE" ]; then
     echo "SSL-Zertifikat bereits vorhanden, prüfe Gültigkeit..."
-    
+
     # Prüfe Ablaufdatum (mindestens 30 Tage gültig)
     if openssl x509 -checkend 2592000 -noout -in "$CERT_FILE" 2>/dev/null; then
         echo "Existierendes Zertifikat ist noch mindestens 30 Tage gültig"

@@ -1,0 +1,93 @@
+# GitHub CodeQL Analysis für Advanced Security
+# Semantic Code Analysis für tiefere Sicherheitsprüfungen
+
+name: "🔍 CodeQL Security Analysis"
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    # Weekly CodeQL analysis
+    - cron: '0 4 * * 2'  # Tuesday 4 AM UTC
+
+jobs:
+  analyze:
+    name: 🧬 CodeQL Analysis
+    runs-on: ubuntu-latest
+
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'python' ]
+
+    steps:
+    - name: 📥 Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: 🔍 Initialize CodeQL
+      uses: github/codeql-action/init@v2
+      with:
+        languages: ${{ matrix.language }}
+        # Custom queries for enhanced security analysis
+        queries: security-extended,security-and-quality
+
+        # Configure CodeQL database
+        db-location: '/tmp/codeql-db'
+
+        # Source root for analysis
+        source-root: src
+
+    - name: 🐍 Setup Python Environment
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: 📦 Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        # Install dev dependencies for complete analysis
+        pip install -r requirements-dev.txt
+
+    - name: 🔨 Autobuild
+      uses: github/codeql-action/autobuild@v2
+
+    - name: 🧪 Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
+      with:
+        category: "/language:${{matrix.language}}"
+
+        # Upload results to GitHub Security tab
+        upload: true
+
+        # Don't fail the workflow on findings
+        upload-database: true
+
+    - name: 📊 Security Analysis Summary
+      run: |
+        echo "## 🔍 CodeQL Security Analysis Complete" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Analysis Details:" >> $GITHUB_STEP_SUMMARY
+        echo "- **Language**: ${{ matrix.language }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Query Suite**: security-extended,security-and-quality" >> $GITHUB_STEP_SUMMARY
+        echo "- **Database**: Uploaded for future reference" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📋 Results Location:" >> $GITHUB_STEP_SUMMARY
+        echo "- Check the **Security** tab in this repository" >> $GITHUB_STEP_SUMMARY
+        echo "- Look for **Code Scanning** alerts" >> $GITHUB_STEP_SUMMARY
+        echo "- Review any **High** or **Critical** severity findings first" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🛡️ Security Focus Areas:" >> $GITHUB_STEP_SUMMARY
+        echo "- **Injection Vulnerabilities** (SQL, Command, etc.)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Authentication & Authorization** flaws" >> $GITHUB_STEP_SUMMARY
+        echo "- **Cryptographic Issues** (weak algorithms, etc.)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Input Validation** problems" >> $GITHUB_STEP_SUMMARY
+        echo "- **Information Disclosure** risks" >> $GITHUB_STEP_SUMMARY

@@ -23,7 +23,7 @@ Die alten Token wurden gelöscht, eine neue Authentifizierung ist erforderlich.
 ### 3. Erweiterte Berechtigungen
 Der Code wurde aktualisiert und fordert jetzt folgende Scopes an:
 - `user-read-currently-playing` - Aktuell spielenden Song lesen
-- `user-read-playback-state` - Playback-Status lesen  
+- `user-read-playback-state` - Playback-Status lesen
 - `playlist-modify-public` - Öffentliche Playlists bearbeiten
 - `playlist-modify-private` - Private Playlists bearbeiten
 - `playlist-read-private` - Private Playlists lesen
@@ -39,7 +39,7 @@ python run.py
 ### 5. Neue Authentifizierung durchführen
 
 - Öffnen Sie den angezeigten Spotify-Link
-- **Wichtig**: Klicken Sie auf "ALLE BERECHTIGUNGEN ANZEIGEN" 
+- **Wichtig**: Klicken Sie auf "ALLE BERECHTIGUNGEN ANZEIGEN"
 - Bestätigen Sie ALLE Berechtigungen
 - Kopieren Sie die komplette Callback-URL ins Terminal
 

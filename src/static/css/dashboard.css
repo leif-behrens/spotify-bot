@@ -85,11 +85,11 @@
     .metric-value {
         font-size: 2rem !important;
     }
-    
+
     .current-track {
         text-align: center;
     }
-    
+
     .card {
         margin-bottom: 15px;
     }
@@ -101,12 +101,12 @@
         background-color: #121212;
         color: #ffffff;
     }
-    
+
     .card {
         background-color: #1e1e1e;
         color: #ffffff;
     }
-    
+
     .text-muted {
         color: #b3b3b3 !important;
     }

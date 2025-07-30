@@ -15,7 +15,9 @@
       "Bash(docker-compose:*)",
       "Bash(docker:*)",
       "Bash(curl:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(git commit:*)"
     ],
     "deny": []
   }

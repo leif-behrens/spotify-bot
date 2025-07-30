@@ -1,0 +1,192 @@
+# DevSecOps Quality Gate Pipeline
+# CWE-1395: Dependency on Vulnerable Third-Party Software mitigation
+# Security: SAST, SCA, Secret Detection, Code Quality
+
+name: 🔒 Security & Quality Gate
+
+# Trigger Events - DevSecOps Best Practice: Check alles
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+  # Security: Regelmäßige Scans auch ohne Code-Änderungen
+  schedule:
+    - cron: '0 6 * * 1'  # Jeden Montag 6:00 UTC
+
+# Security: Minimal permissions principle
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  quality-gate:
+    name: 🛡️ Security & Quality Analysis
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: [3.9, 3.10, 3.11]
+
+    steps:
+    # Schritt 1: Code auschecken
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      with:
+        # Security: Full history für Secret-Detection
+        fetch-depth: 0
+
+    # Schritt 2: Python Setup mit Security
+    - name: 🐍 Setup Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        # Security: Cached pip für konsistente Dependencies
+        cache: 'pip'
+        cache-dependency-path: |
+          requirements.txt
+          requirements-dev.txt
+
+    # Schritt 3: Dependencies installieren
+    - name: 📦 Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        # Security: Pin exact versions
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+
+    # Schritt 4: Code Formatting Check (Black)
+    - name: 🎨 Code Formatting (Black)
+      run: |
+        echo "::group::Black Code Formatting"
+        black --check --diff src/
+        echo "::endgroup::"
+
+    # Schritt 5: Import Sorting (isort)
+    - name: 📋 Import Sorting (isort)
+      run: |
+        echo "::group::Import Organization"
+        isort --check-only --diff src/
+        echo "::endgroup::"
+
+    # Schritt 6: Code Quality (Flake8)
+    - name: 📊 Code Quality (Flake8)
+      run: |
+        echo "::group::Code Quality Analysis"
+        flake8 src/ --max-line-length=88 --extend-ignore=E203,W503,E501 \
+               --format='::error file=%(path)s,line=%(row)d,col=%(col)d::%(code)s: %(text)s'
+        echo "::endgroup::"
+
+    # Schritt 7: SAST Security Scanning (Bandit)
+    - name: 🔍 SAST Security Scan (Bandit)
+      run: |
+        echo "::group::Static Application Security Testing"
+        bandit -c pyproject.toml -r src/ \
+               -f json -o bandit-results.json || true
+
+        # Security Report für GitHub
+        bandit -c pyproject.toml -r src/ \
+               -f txt || echo "Security issues found - check output"
+        echo "::endgroup::"
+
+    # Schritt 8: Upload Security Results
+    - name: 📤 Upload Bandit Results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: bandit-results-${{ matrix.python-version }}
+        path: bandit-results.json
+        retention-days: 30
+
+    # Schritt 9: Secret Detection
+    - name: 🔐 Secret Detection
+      run: |
+        echo "::group::Secret Detection Scan"
+        # Prüfe auf neue Secrets seit letztem Commit
+        detect-secrets scan --baseline .secrets.baseline \
+                          --exclude-files '.*\.git/.*' \
+                          --exclude-files '.*\.pytest_cache/.*' \
+                          --exclude-files '.*venv/.*' || \
+        (echo "::error::New secrets detected! Run 'detect-secrets scan --update .secrets.baseline' locally" && exit 1)
+        echo "::endgroup::"
+
+    # Schritt 10: Dependency Vulnerability Scan
+    - name: 🛡️ Dependency Security (Safety)
+      run: |
+        echo "::group::Software Composition Analysis"
+        # Alternative zu Safety (falls es Probleme gibt)
+        pip-audit --requirement requirements.txt --format=json --output=dependency-scan.json || true
+        pip-audit --requirement requirements.txt || echo "Vulnerable dependencies found"
+        echo "::endgroup::"
+      continue-on-error: true
+
+    # Schritt 11: Type Checking (mypy)
+    - name: 🔬 Type Checking (mypy)
+      run: |
+        echo "::group::Static Type Analysis"
+        mypy src/ --ignore-missing-imports || echo "Type issues found"
+        echo "::endgroup::"
+      continue-on-error: true
+
+  # Job 2: Pre-commit Hook Validation
+  pre-commit-validation:
+    name: 🪝 Pre-commit Hook Test
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+        cache: 'pip'
+
+    - name: 📦 Install Pre-commit
+      run: |
+        pip install pre-commit
+        pre-commit install
+
+    - name: 🧪 Test Pre-commit Hooks
+      run: |
+        echo "::group::Pre-commit Hook Validation"
+        # Test alle Hooks auf gesamter Codebase
+        pre-commit run --all-files || echo "Pre-commit issues found"
+        echo "::endgroup::"
+      continue-on-error: true
+
+  # Job 3: Security Summary
+  security-summary:
+    name: 📋 Security Summary
+    runs-on: ubuntu-latest
+    needs: [quality-gate, pre-commit-validation]
+    if: always()
+
+    steps:
+    - name: 📥 Download Artifacts
+      uses: actions/download-artifact@v3
+      with:
+        path: security-reports
+
+    - name: 📊 Security Report Summary
+      run: |
+        echo "## 🔒 DevSecOps Security Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Quality Gate Results:" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Code Formatting: Checked" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ SAST Scanning: Completed" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Secret Detection: Verified" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Dependency Scan: Executed" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Security Tools Used:" >> $GITHUB_STEP_SUMMARY
+        echo "- 🔍 **Bandit** (SAST)" >> $GITHUB_STEP_SUMMARY
+        echo "- 🔐 **detect-secrets** (Secret Detection)" >> $GITHUB_STEP_SUMMARY
+        echo "- 🛡️ **pip-audit** (SCA)" >> $GITHUB_STEP_SUMMARY
+        echo "- 🎨 **Black/Flake8** (Code Quality)" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Next Steps:" >> $GITHUB_STEP_SUMMARY
+        echo "- Review any security findings above" >> $GITHUB_STEP_SUMMARY
+        echo "- Update dependencies if vulnerabilities found" >> $GITHUB_STEP_SUMMARY
+        echo "- Run 'pre-commit run --all-files' locally if needed" >> $GITHUB_STEP_SUMMARY

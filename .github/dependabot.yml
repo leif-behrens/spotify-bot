@@ -1,0 +1,89 @@
+# Dependabot Konfiguration für automatische Dependency Updates
+# CWE-1104: Use of Unmaintained Third Party Components mitigation
+
+version: 2
+updates:
+  # Python Dependencies
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Berlin"
+
+    # Security: Prioritize security updates
+    open-pull-requests-limit: 10
+
+    # Automatic merging for patch-level updates
+    allow:
+      - dependency-type: "direct"
+        update-type: "version-update:semver-patch"
+      - dependency-type: "indirect"
+        update-type: "version-update:semver-patch"
+
+    # Custom commit message
+    commit-message:
+      prefix: "🔒 security"
+      include: "scope"
+
+    # Assign security team
+    assignees:
+      - "security-team"  # Ersetzen mit echten GitHub Benutzernamen
+
+    # Labels for categorization
+    labels:
+      - "dependencies"
+      - "security"
+      - "automerge"
+
+    # Security-only updates for production dependencies
+    target-branch: "main"
+
+    # Ignore specific packages (if needed)
+    ignore:
+      - dependency-name: "spotipy"
+        # Ignore patch updates, only allow minor/major after testing
+        update-types: ["version-update:semver-patch"]
+
+  # Docker Dependencies
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "06:00"
+      timezone: "Europe/Berlin"
+
+    open-pull-requests-limit: 5
+
+    commit-message:
+      prefix: "🐳 docker"
+      include: "scope"
+
+    labels:
+      - "docker"
+      - "security"
+
+    # Security: Always update base images for security patches
+    allow:
+      - dependency-type: "direct"
+
+  # GitHub Actions Dependencies
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "06:00"
+      timezone: "Europe/Berlin"
+
+    open-pull-requests-limit: 5
+
+    commit-message:
+      prefix: "🔧 actions"
+      include: "scope"
+
+    labels:
+      - "github-actions"
+      - "security"

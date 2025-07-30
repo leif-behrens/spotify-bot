@@ -6,41 +6,41 @@
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <meta http-equiv="X-Frame-Options" content="DENY">
     <title>{% block title %}Spotify Auto-Discovery Bot{% endblock %}</title>
-    
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
-    
+
     <!-- Chart.js - Ältere kompatible Version -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js" crossorigin="anonymous"></script>
-    
+
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
-    
+
     <style>
         body {
             background-color: #f8f9fa;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        
+
         .navbar-brand {
             font-weight: bold;
             color: #1db954 !important;
         }
-        
+
         .card {
             border: none;
             border-radius: 12px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             margin-bottom: 20px;
         }
-        
+
         .card-header {
             background: linear-gradient(135deg, #1db954, #1ed760);
             color: white;
             border-radius: 12px 12px 0 0 !important;
             font-weight: 600;
         }
-        
+
         .status-indicator {
             display: inline-block;
             width: 12px;
@@ -48,60 +48,60 @@
             border-radius: 50%;
             margin-right: 8px;
         }
-        
+
         .status-running {
             background-color: #28a745;
             animation: pulse 2s infinite;
         }
-        
+
         .status-stopped {
             background-color: #dc3545;
         }
-        
+
         @keyframes pulse {
             0% { opacity: 1; }
             50% { opacity: 0.5; }
             100% { opacity: 1; }
         }
-        
+
         .metric-card {
             text-align: center;
             padding: 20px;
         }
-        
+
         .metric-value {
             font-size: 2.5rem;
             font-weight: bold;
             color: #1db954;
             margin-bottom: 5px;
         }
-        
+
         .metric-label {
             color: #6c757d;
             font-size: 0.9rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        
+
         .btn-spotify {
             background-color: #1db954;
             border-color: #1db954;
             color: white;
         }
-        
+
         .btn-spotify:hover {
             background-color: #1ed760;
             border-color: #1ed760;
             color: white;
         }
-        
+
         .current-track {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border-radius: 12px;
             padding: 20px;
         }
-        
+
         .footer {
             margin-top: 50px;
             padding: 20px 0;
@@ -140,10 +140,10 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
-    
+
     <!-- Custom JS -->
     <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
-    
+
     {% block scripts %}{% endblock %}
 </body>
 </html>

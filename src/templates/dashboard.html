@@ -13,7 +13,7 @@
                     <div class="col-md-6">
                         <p class="mb-2">
                             <span class="status-indicator {% if service_status.is_running %}status-running{% else %}status-stopped{% endif %}"></span>
-                            <strong>Status:</strong> 
+                            <strong>Status:</strong>
                             {% if service_status.is_running %}
                                 <span class="text-success">Läuft</span>
                             {% else %}
@@ -21,11 +21,11 @@
                             {% endif %}
                         </p>
                         <p class="mb-2">
-                            <strong>Session ID:</strong> 
+                            <strong>Session ID:</strong>
                             <code>{{ service_status.session_id[:8] if service_status.session_id else 'N/A' }}...</code>
                         </p>
                         <p class="mb-0">
-                            <strong>Fehler:</strong> 
+                            <strong>Fehler:</strong>
                             <span class="{% if service_status.error_count > 0 %}text-warning{% else %}text-success{% endif %}">
                                 {{ service_status.error_count }} Fehler
                             </span>
@@ -118,7 +118,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Top Artists -->
     <div class="col-md-4">
         <div class="card">
@@ -146,7 +146,7 @@
     <div class="col-12">
         <div class="text-center">
             <small class="text-muted">
-                <span id="refresh-indicator">🔄</span> 
+                <span id="refresh-indicator">🔄</span>
                 Dashboard wird automatisch aktualisiert - Letzte Aktualisierung: <span id="last-update">{{ current_time.strftime('%H:%M:%S') if current_time else '' }}</span>
             </small>
         </div>
@@ -160,13 +160,13 @@
     window.activityChart = null;
     window.chartLoading = false;
     let refreshInterval = null;
-    
+
     // Service Control
     function controlService(action) {
         const button = event.target;
         button.disabled = true;
         button.innerHTML = action === 'start' ? 'Startet...' : 'Stoppt...';
-        
+
         fetch(`/service/${action}`, {
             method: 'POST',
             headers: {
@@ -201,7 +201,7 @@
             button.innerHTML = action === 'start' ? 'Service Starten' : 'Service Stoppen';
         });
     }
-    
+
     // Load Activity Chart
     function loadActivityChart() {
         // Verhindere mehrfache gleichzeitige Aufrufe
@@ -209,10 +209,10 @@
             console.log('Chart loading already in progress, skipping...');
             return;
         }
-        
+
         window.chartLoading = true;
         console.log('Loading activity chart...');
-        
+
         // Prüfe ob Chart.js verfügbar ist
         if (typeof Chart === 'undefined') {
             console.error('Chart.js is not loaded');
@@ -233,9 +233,9 @@
             window.chartLoading = false;
             return;
         }
-        
+
         console.log('Chart.js version:', Chart.version);
-        
+
         fetch('/api/activity?days=30')
             .then(response => {
                 console.log('API response status:', response.status);
@@ -246,16 +246,16 @@
             })
             .then(data => {
                 console.log('Activity data received:', data);
-                
+
                 // Robuste Chart-Container-Suche
                 let chartContainer = null;
-                
+
                 // 1. Versuche über existierenden Canvas
                 const existingCanvas = document.getElementById('activityChart');
                 if (existingCanvas && existingCanvas.parentElement) {
                     chartContainer = existingCanvas.parentElement;
                 }
-                
+
                 // 2. Fallback: Suche über Card-Header Text
                 if (!chartContainer) {
                     const headers = document.querySelectorAll('.card-header h5');
@@ -266,7 +266,7 @@
                         }
                     }
                 }
-                
+
                 // 3. Letzter Fallback: Suche über Canvas in Card-Body
                 if (!chartContainer) {
                     const canvasInCard = document.querySelector('.card-body canvas');
@@ -274,7 +274,7 @@
                         chartContainer = canvasInCard.parentElement;
                     }
                 }
-                
+
                 if (!Array.isArray(data) || data.length === 0) {
                     console.warn('No activity data available');
                     // Zeige Nachricht für fehlende Daten
@@ -290,43 +290,43 @@
                     window.chartLoading = false;
                     return;
                 }
-                
+
                 if (!chartContainer) {
                     console.error('Chart container not found');
                     window.chartLoading = false;
                     return;
                 }
-                
+
                 // Prepare data
                 const labels = data.map(day => new Date(day.date).toLocaleDateString('de-DE', {month: 'short', day: 'numeric'})).reverse();
                 const tracksPlayed = data.map(day => day.tracks_played || 0).reverse();
                 const tracksAdded = data.map(day => day.tracks_added || 0).reverse();
-                
+
                 console.log('Chart data prepared:', { labels, tracksPlayed, tracksAdded });
-                
+
                 // Komplette Canvas-Neuerstellung
-                
+
                 // Zerstöre existierenden Chart komplett
                 if (window.activityChart && typeof window.activityChart.destroy === 'function') {
                     console.log('Destroying existing chart');
                     window.activityChart.destroy();
                     window.activityChart = null;
                 }
-                
+
                 // Entferne alten Canvas komplett
                 const oldCanvas = document.getElementById('activityChart');
                 if (oldCanvas) {
                     oldCanvas.remove();
                 }
-                
+
                 // Erstelle neuen Canvas mit fester ID für Konsistenz
                 const newCanvas = document.createElement('canvas');
                 newCanvas.id = 'activityChart';
                 // Keine feste Höhe - wird von CSS des Containers bestimmt
                 chartContainer.appendChild(newCanvas);
-                
+
                 console.log('Created new canvas with ID:', newCanvas.id);
-                
+
                 // Erstelle neuen Chart mit neuem Canvas
                 window.activityChart = new Chart(newCanvas.getContext('2d'), {
                     type: 'line',
@@ -381,7 +381,7 @@
                         }
                     }
                 });
-                
+
                 console.log('Chart created successfully');
                 window.chartLoading = false;
             })
@@ -404,25 +404,25 @@
                 window.chartLoading = false;
             });
     }
-    
+
     // Show message in chart area
     function showChartMessage(message) {
         // Reset loading flag
         window.chartLoading = false;
-        
+
         // Zerstöre Chart falls vorhanden
         if (window.activityChart && typeof window.activityChart.destroy === 'function') {
             window.activityChart.destroy();
             window.activityChart = null;
         }
-        
+
         // Finde Chart Container
         let chartContainer = document.querySelector('#activityChart')?.parentElement;
         if (!chartContainer) {
             // Falls Canvas durch ID-Änderung nicht gefunden wird, suche nach card-body
             chartContainer = document.querySelector('.card-body');
         }
-        
+
         if (chartContainer) {
             chartContainer.innerHTML = `
                 <div class="text-center text-muted py-5">
@@ -435,7 +435,7 @@
             `;
         }
     }
-    
+
     // Update Statistics
     function updateStatistics() {
         fetch('/api/statistics?days=7')
@@ -445,7 +445,7 @@
                 document.getElementById('added-tracks').textContent = data.tracks_added_to_playlist || 0;
                 document.getElementById('discovery-rate').textContent = (data.discovery_rate || 0).toFixed(1) + '%';
                 document.getElementById('avg-duration').textContent = Math.round(data.average_listening_duration_seconds || 0) + 's';
-                
+
                 // Update top artists
                 const topArtistsList = document.getElementById('top-artists-list');
                 if (data.top_artists && data.top_artists.length > 0) {
@@ -461,7 +461,7 @@
                 console.error('Error updating statistics:', error);
             });
     }
-    
+
     // Update Status and Current Track
     function updateStatus() {
         fetch('/api/status')
@@ -469,7 +469,7 @@
             .then(data => {
                 // Update current track section
                 updateCurrentTrackSection(data);
-                
+
                 // Update last update time
                 document.getElementById('last-update').textContent = new Date().toLocaleTimeString('de-DE');
             })
@@ -477,22 +477,22 @@
                 console.error('Error updating status:', error);
             });
     }
-    
+
     // Update Current Track Section
     function updateCurrentTrackSection(data) {
         const currentTrackSection = document.querySelector('.current-track');
         const hasActiveSession = data.has_active_session;
         const currentTrack = data.current_track;
-        
+
         // Check if we should show/hide the current track section
         const currentTrackRow = currentTrackSection?.closest('.row');
-        
+
         if (hasActiveSession && currentTrack) {
             // Show current track section
             if (currentTrackRow) {
                 currentTrackRow.style.display = 'block';
             }
-            
+
             // Update track info if section exists
             if (currentTrackSection) {
                 // Update track name
@@ -500,19 +500,19 @@
                 if (trackNameElement) {
                     trackNameElement.textContent = currentTrack.name || 'Unbekannter Titel';
                 }
-                
+
                 // Update artist
                 const artistElement = currentTrackSection.querySelector('p strong');
                 if (artistElement) {
                     artistElement.textContent = currentTrack.artist || 'Unbekannter Artist';
                 }
-                
+
                 // Update listening duration
                 const durationElement = document.getElementById('listening-duration');
                 if (durationElement && currentTrack.listening_duration !== undefined) {
                     durationElement.textContent = currentTrack.listening_duration;
                 }
-                
+
                 // Update playlist status
                 const playlistStatusContainer = currentTrackSection.querySelector('.col-md-6.text-md-end small');
                 if (playlistStatusContainer) {
@@ -533,11 +533,11 @@
             }
         }
     }
-    
+
     // Create Current Track Section dynamically
     function createCurrentTrackSection(track) {
         const serviceStatusRow = document.querySelector('.row .card .card-header h5').closest('.row');
-        
+
         const currentTrackHTML = `
             <div class="row">
                 <div class="col-12">
@@ -553,8 +553,8 @@
                             </div>
                             <div class="col-md-6 text-md-end">
                                 <small>
-                                    ${track.added_to_playlist ? 
-                                        '✅ <span class="text-success">Zur Playlist hinzugefügt</span>' : 
+                                    ${track.added_to_playlist ?
+                                        '✅ <span class="text-success">Zur Playlist hinzugefügt</span>' :
                                         '⏳ Noch nicht hinzugefügt'
                                     }
                                 </small>
@@ -564,36 +564,36 @@
                 </div>
             </div>
         `;
-        
+
         // Insert after service status
         serviceStatusRow.insertAdjacentHTML('afterend', currentTrackHTML);
     }
-    
+
     // Utility function to escape HTML
     function escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
     }
-    
+
     // Initialize dashboard
     document.addEventListener('DOMContentLoaded', function() {
         // Load initial data
         loadActivityChart();
-        
+
         // Set up auto-refresh intervals
         let chartRefreshCounter = 0;
         let statusRefreshCounter = 0;
-        
+
         // Live updates for current track (every 2 seconds)
         setInterval(() => {
             updateStatus();
         }, 2000);
-        
+
         // Statistics and chart updates (every 30 seconds)
         refreshInterval = setInterval(() => {
             updateStatistics();
-            
+
             // Refresh activity chart every 5 minutes (10 * 30s = 5min)
             chartRefreshCounter++;
             if (chartRefreshCounter >= 10) {
@@ -605,7 +605,7 @@
                 chartRefreshCounter = 0;
             }
         }, 30000); // Refresh statistics every 30 seconds
-        
+
         // Update last update time indicator
         setInterval(() => {
             const lastUpdateElement = document.getElementById('last-update');
@@ -614,7 +614,7 @@
             }
         }, 1000);
     });
-    
+
     // Clean up on page unload
     window.addEventListener('beforeunload', function() {
         if (refreshInterval) {

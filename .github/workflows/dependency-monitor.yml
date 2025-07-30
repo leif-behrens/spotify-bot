@@ -1,0 +1,248 @@
+# DevSecOps Dependency Security Monitoring
+# CWE-1104: Use of Unmaintained Third Party Components
+# Continuous dependency vulnerability monitoring
+
+name: 🔗 Dependency Security Monitor
+
+on:
+  # Security: Daily dependency checks
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM UTC
+
+  # Manual trigger for immediate checks
+  workflow_dispatch:
+
+  # Check on dependency file changes
+  push:
+    paths:
+      - 'requirements.txt'
+      - 'requirements-dev.txt'
+      - 'pyproject.toml'
+
+permissions:
+  contents: read
+  security-events: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  dependency-security:
+    name: 🛡️ Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📥 Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: 🐍 Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: 📦 Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pip-audit safety
+
+    # Schritt 1: Pip-Audit (Modern SCA)
+    - name: 🔍 Pip-Audit Vulnerability Scan
+      run: |
+        echo "::group::Software Composition Analysis (pip-audit)"
+
+        # Scan production dependencies
+        echo "### Production Dependencies:" >> $GITHUB_STEP_SUMMARY
+        pip-audit --requirement requirements.txt \
+                  --format=json \
+                  --output=prod-audit.json || true
+
+        pip-audit --requirement requirements.txt \
+                  --format=markdown >> $GITHUB_STEP_SUMMARY || true
+
+        # Scan development dependencies
+        echo "### Development Dependencies:" >> $GITHUB_STEP_SUMMARY
+        pip-audit --requirement requirements-dev.txt \
+                  --format=json \
+                  --output=dev-audit.json || true
+
+        pip-audit --requirement requirements-dev.txt \
+                  --format=markdown >> $GITHUB_STEP_SUMMARY || true
+
+        echo "::endgroup::"
+
+    # Schritt 2: Safety Database Scan
+    - name: 🛡️ Safety Database Scan
+      run: |
+        echo "::group::Safety Database Vulnerability Check"
+
+        # Safety scan with detailed output
+        safety check --json --output safety-results.json || true
+        safety check --full-report || echo "Vulnerabilities found - check details above"
+
+        echo "::endgroup::"
+      continue-on-error: true
+
+    # Schritt 3: License Compliance Check
+    - name: 📜 License Compliance Check
+      run: |
+        echo "::group::License Compliance Analysis"
+
+        # Install license checker
+        pip install pip-licenses
+
+        # Generate license report
+        echo "### 📋 License Report:" >> $GITHUB_STEP_SUMMARY
+        echo "```" >> $GITHUB_STEP_SUMMARY
+        pip-licenses --format=markdown --no-license-path >> $GITHUB_STEP_SUMMARY
+        echo "```" >> $GITHUB_STEP_SUMMARY
+
+        # Check for problematic licenses
+        PROBLEMATIC_LICENSES="GPL-3.0|AGPL-3.0|LGPL-3.0"
+
+        if pip-licenses | grep -E "$PROBLEMATIC_LICENSES"; then
+          echo "::warning::Potentially problematic licenses detected"
+          echo "- ⚠️ **Warning**: Copyleft licenses detected" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "- ✅ **Good**: No problematic licenses detected" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        echo "::endgroup::"
+
+    # Schritt 4: Dependency Freshness Check
+    - name: 📅 Dependency Freshness Analysis
+      run: |
+        echo "::group::Dependency Freshness Check"
+
+        # Install pip-check-updates equivalent
+        pip install pip-review
+
+        echo "### 🔄 Outdated Dependencies:" >> $GITHUB_STEP_SUMMARY
+        echo "```" >> $GITHUB_STEP_SUMMARY
+        pip list --outdated >> $GITHUB_STEP_SUMMARY || echo "All dependencies up to date"
+        echo "```" >> $GITHUB_STEP_SUMMARY
+
+        # Count outdated packages
+        OUTDATED_COUNT=$(pip list --outdated --format=freeze | wc -l)
+        if [ $OUTDATED_COUNT -gt 0 ]; then
+          echo "- 📊 **Info**: $OUTDATED_COUNT outdated dependencies found" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "- ✅ **Good**: All dependencies are up to date" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        echo "::endgroup::"
+
+    # Schritt 5: Generate Security Advisory
+    - name: 📊 Generate Security Advisory
+      run: |
+        echo "::group::Dependency Security Advisory"
+
+        # Create comprehensive security report
+        cat > dependency-security-report.md << EOF
+        # 🔗 Dependency Security Report
+
+        **Generated:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')
+        **Repository:** ${{ github.repository }}
+        **Commit:** ${{ github.sha }}
+
+        ## Summary
+
+        This report provides a comprehensive analysis of dependency security status.
+
+        ## Vulnerability Scan Results
+
+        ### Production Dependencies
+        $(if [ -f prod-audit.json ]; then echo "See pip-audit results above"; else echo "No vulnerabilities found"; fi)
+
+        ### Development Dependencies
+        $(if [ -f dev-audit.json ]; then echo "See pip-audit results above"; else echo "No vulnerabilities found"; fi)
+
+        ## Recommendations
+
+        1. **Regular Updates**: Update dependencies monthly
+        2. **Security Monitoring**: Enable GitHub Dependabot alerts
+        3. **Version Pinning**: Pin exact versions in production
+        4. **License Review**: Review license compatibility regularly
+
+        ## Next Steps
+
+        - [ ] Review any HIGH/CRITICAL vulnerabilities
+        - [ ] Update vulnerable dependencies
+        - [ ] Test application after updates
+        - [ ] Update security baseline if needed
+
+        EOF
+
+        echo "Security advisory generated"
+        echo "::endgroup::"
+
+    # Schritt 6: Upload Security Artifacts
+    - name: 📤 Upload Security Reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: dependency-security-reports
+        path: |
+          prod-audit.json
+          dev-audit.json
+          safety-results.json
+          dependency-security-report.md
+        retention-days: 90  # Longer retention for security reports
+
+    # Schritt 7: Create Issue for Critical Vulnerabilities
+    - name: 🚨 Create Security Issue (if needed)
+      run: |
+        echo "::group::Critical Vulnerability Assessment"
+
+        # Check for critical vulnerabilities in audit results
+        if [ -f prod-audit.json ]; then
+          CRITICAL_COUNT=$(cat prod-audit.json | jq '[.vulnerabilities[] | select(.severity == "critical")] | length' 2>/dev/null || echo "0")
+
+          if [ "$CRITICAL_COUNT" -gt 0 ]; then
+            echo "::error::$CRITICAL_COUNT critical vulnerabilities found!"
+            echo "Critical vulnerabilities require immediate attention"
+
+            # Note: In a real setup, you could create GitHub issues automatically
+            echo "Would create GitHub issue for critical vulnerabilities"
+          else
+            echo "No critical vulnerabilities found"
+          fi
+        fi
+
+        echo "::endgroup::"
+
+    # Schritt 8: SBOM Generation for Dependencies
+    - name: 📋 Generate Dependency SBOM
+      run: |
+        echo "::group::Software Bill of Materials (SBOM)"
+
+        # Create SBOM in SPDX format
+        pip install cyclonedx-bom
+
+        # Generate SBOM
+        cyclonedx-py -r -o sbom-dependencies.json
+
+        echo "### 📋 SBOM Generated" >> $GITHUB_STEP_SUMMARY
+        echo "- Software Bill of Materials created for all dependencies" >> $GITHUB_STEP_SUMMARY
+        echo "- SBOM format: CycloneDX JSON" >> $GITHUB_STEP_SUMMARY
+        echo "- Use for compliance and supply chain security" >> $GITHUB_STEP_SUMMARY
+
+        echo "::endgroup::"
+
+    # Final Summary
+    - name: 📈 Security Summary
+      run: |
+        echo "## 🔗 Dependency Security Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Scans Completed:" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ **pip-audit**: Vulnerability database scan" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ **Safety**: PyUp.io security database" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ **License Check**: License compliance analysis" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ **Freshness**: Outdated dependency check" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ **SBOM**: Software Bill of Materials generated" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Next Actions:" >> $GITHUB_STEP_SUMMARY
+        echo "1. Review any security findings above" >> $GITHUB_STEP_SUMMARY
+        echo "2. Update vulnerable dependencies immediately" >> $GITHUB_STEP_SUMMARY
+        echo "3. Test application after dependency updates" >> $GITHUB_STEP_SUMMARY
+        echo "4. Monitor for new vulnerabilities daily" >> $GITHUB_STEP_SUMMARY

@@ -12,19 +12,19 @@ services:
       - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
       - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
       - SPOTIFY_REDIRECT_URI=https://127.0.0.1:443/callback
-      
+
       # Flask Configuration
       - FLASK_ENV=production
       - FLASK_DEBUG=False
       - FLASK_SECRET_KEY=${FLASK_SECRET_KEY:-your-super-secret-key-change-me}
-      
+
       # Database
       - DATABASE_PATH=/app/data/spotify_bot.db
-      
+
       # Logging
       - LOG_LEVEL=INFO
       - LOG_FILE=/app/logs/spotify_bot.log
-      
+
       # Security
       - PYTHONDONTWRITEBYTECODE=1
       - PYTHONUNBUFFERED=1

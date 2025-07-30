@@ -13,21 +13,21 @@
                 <div class="mb-4">
                     <i class="fas fa-exclamation-triangle text-danger" style="font-size: 4rem;"></i>
                 </div>
-                
+
                 <h6 class="card-title">Es ist ein Problem aufgetreten</h6>
-                
+
                 {% if error_message %}
                 <p class="card-text text-muted">
                     {{ error_message | e }}
                 </p>
                 {% endif %}
-                
+
                 <div class="mt-4">
                     <a href="{{ url_for('dashboard') }}" class="btn btn-spotify">
                         🏠 Zurück zum Dashboard
                     </a>
                 </div>
-                
+
                 <div class="mt-3">
                     <small class="text-muted">
                         Falls das Problem weiterhin besteht, prüfen Sie die Service-Logs oder starten Sie den Service neu.
