@@ -1,0 +1,9 @@
+{
+  "discovery": {
+    "pid": 23204,
+    "port": 9001,
+    "status": "running",
+    "registered_at": "2025-07-30T11:28:02.951618",
+    "last_heartbeat": "2025-07-30T11:31:07.136571"
+  }
+}

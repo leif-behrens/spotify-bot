@@ -1,14 +1,20 @@
-# Spotify Auto-Discovery Bot
+# Spotify Mikroservice-Plattform
 
-Ein sicherheitsorientierter Python-Service, der automatisch Songs zur Playlist hinzufügt, basierend auf dem Hörverhalten.
+Eine sicherheitsorientierte Mikroservice-Architektur für Spotify-basierte Services mit zentralem Management-Dashboard.
 
-## Features
+## 🎵 Services
 
-- **Sichere Authentifizierung**: OAuth2 mit verschlüsselter Token-Speicherung
-- **Automatische Playlist-Verwaltung**: Erstellt und verwaltet "AutoDiscovered Songs" Playlist
-- **Konfigurierbare Überwachung**: JSON-basierte Konfiguration für Intervalle und Schwellenwerte
-- **Statistik-Dashboard**: Flask-basierte Weboberfläche für Insights
-- **Security-First**: Implementiert nach OpenSSF und OWASP Standards
+### Verfügbare Services
+- **Discovery Service**: Automatische Musik-Entdeckung basierend auf Hörverhalten
+- **Playlist Sync** *(Coming Soon)*: Playlist-Synchronisation zwischen Konten
+- **Mood Analyzer** *(Coming Soon)*: Stimmungsanalyse der Musik
+- **Recommendation Engine** *(Coming Soon)*: KI-basierte Musikempfehlungen
+
+### Service Management Dashboard
+- **Start/Stop/Restart**: Einfache Service-Steuerung per Klick
+- **Real-time Monitoring**: Live-Status und Gesundheitsprüfung
+- **Error Tracking**: Fehleranzahl und letzte Fehlermeldungen pro Service
+- **Uptime Monitoring**: Laufzeit-Verfolgung für jeden Service
 
 ## Sicherheitsfeatures
 
@@ -43,14 +49,42 @@ cp .env.template .env
 # config.json nach Bedarf bearbeiten
 ```
 
-## Verwendung
+## 🚀 Schnellstart
+
+### Process-basierte Mikroservice-Architektur (Neu!)
+
+**Services als eigenständige Prozesse - unabhängig vom Dashboard:**
 
 ```bash
-# Service starten
-python -m src.main
+# 1. Service-Daemon starten (läuft dauerhaft)
+python service_controller.py start discovery
 
-# Dashboard öffnen
-http://localhost:5000
+# 2. Dashboard starten (nur UI - optional)
+python dashboard_app.py
+
+# Dashboard öffnen: http://localhost:5000
+```
+
+**Service-Management per CLI:**
+```bash
+python service_controller.py list      # Services auflisten
+python service_controller.py start discovery  # Service starten
+python service_controller.py stop discovery   # Service stoppen
+python service_controller.py status discovery # Service-Status
+```
+
+### In-Process Architektur (Legacy)
+
+```bash
+# Alle Services in einem Prozess (alte Architektur)
+python app.py
+```
+
+### Alte Monolith-Anwendung (deprecated)
+
+```bash
+# Fallback zur ursprünglichen Anwendung
+python -m src.main
 ```
 
 ## Konfiguration
@@ -65,25 +99,64 @@ http://localhost:5000
 - `SPOTIFY_CLIENT_SECRET`: Deine Spotify App Client Secret
 - `SPOTIFY_REDIRECT_URI`: OAuth Redirect URI
 
-## Architektur
+## 🏗️ Mikroservice-Architektur Evolution
 
+### 🆕 **Process-basierte Architektur (Empfohlen)**
 ```
-src/
-├── config.py           # Sichere Konfigurationsverwaltung
-├── spotify_auth.py     # OAuth2 Authentifizierung
-├── playlist_manager.py # Playlist-Operations
-├── monitoring_service.py # Kontinuierliche Überwachung
-├── statistics.py       # Datensammlung und -analyse
-└── dashboard.py        # Flask Web-Interface
+📁 Echte Mikroservices - Services als separate Prozesse
+├── service_controller.py     # CLI für Service-Management
+├── dashboard_app.py          # Dashboard-Only Application
+├── ipc/                      # Inter-Process Communication
+│   ├── communication.py      # IPC Protocol (TCP Sockets)
+│   └── service_registry.json # Persistent Service State
+├── services/
+│   └── discovery/
+│       ├── service.py        # Service-Logik
+│       └── daemon.py         # Service als Daemon-Prozess
+└── dashboard/templates/      # Dashboard UI
+
+Vorteile:
+✅ Services laufen unabhängig vom Dashboard
+✅ Dashboard-Crash stoppt keine Services
+✅ Services können remote verwaltet werden
+✅ Bessere Skalierbarkeit und Isolation
 ```
 
-## Security Standards
+### 📦 **In-Process Architektur (Legacy)**
+```
+📁 Services in einem Prozess (Alte Architektur)
+├── app.py                    # Hauptanwendung
+├── core/                     # Kern-Framework
+│   ├── service_base.py       # Basis-Klasse für Services
+│   └── service_manager.py    # Service Registry & Manager
+└── dashboard/                # Management-Dashboard
+    ├── service_control.py    # Dashboard-Controller
+    └── templates/            # HTML-Templates
+```
 
-Dieses Projekt folgt:
-- OpenSSF Secure Coding Guidelines
-- OWASP Developer Guide
-- CWE Common Weakness Enumeration
-- Bandit Security Linter
+### 🗂️ **Monolith (Deprecated)**
+```
+📁 Original Single-Application
+└── src/                      # Alte Monolith-Architektur
+    ├── main.py               # Ursprüngliche Anwendung
+    ├── dashboard.py          # Altes Dashboard
+    └── ...                   # Legacy-Code
+```
+
+## 🔒 Security Standards
+
+Diese Mikroservice-Plattform implementiert:
+- **OpenSSF Secure Coding Guidelines**: Sichere Entwicklungspraktiken
+- **OWASP Developer Guide**: Web-Security Best Practices
+- **CWE Common Weakness Enumeration**: Schwachstellen-Prävention
+- **Bandit Security Linter**: Automatisierte Sicherheitstests
+- **DevSecOps Integration**: CI/CD Pipeline mit Security Scanning
+
+### Neue Security Features in der Mikroservice-Architektur
+- **Service Isolation**: Jeder Service läuft isoliert mit eigener Fehlerbehandlung
+- **Centralized Logging**: Sichere, strukturierte Logs ohne sensible Daten
+- **Health Monitoring**: Automatische Überwachung und Restart bei Fehlern
+- **Input Sanitization**: Umfassende Validierung aller Service-Parameter
 
 ## Lizenz
 

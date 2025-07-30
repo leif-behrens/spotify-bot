@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Spotify Services Dashboard</title>
+
+    <!-- Security Headers -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .service-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .service-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .service-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .service-name {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .service-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-running {
+            background: #27ae60;
+        }
+
+        .status-stopped {
+            background: #e74c3c;
+        }
+
+        .status-error {
+            background: #f39c12;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .service-info {
+            margin-bottom: 20px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .info-label {
+            color: #7f8c8d;
+            font-weight: 500;
+        }
+
+        .info-value {
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .service-description {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .service-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: white;
+        }
+
+        .btn-start:hover:not(:disabled) {
+            background: linear-gradient(135deg, #229954, #27ae60);
+            transform: translateY(-2px);
+        }
+
+        .btn-stop {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+
+        .btn-stop:hover:not(:disabled) {
+            background: linear-gradient(135deg, #c0392b, #a93226);
+            transform: translateY(-2px);
+        }
+
+        .btn-restart {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+        }
+
+        .btn-restart:hover:not(:disabled) {
+            background: linear-gradient(135deg, #e67e22, #d35400);
+            transform: translateY(-2px);
+        }
+
+        .error-message {
+            background: rgba(231, 76, 60, 0.1);
+            border: 1px solid rgba(231, 76, 60, 0.3);
+            color: #c0392b;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            margin-top: 10px;
+            word-break: break-word;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+        }
+
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.success {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+        }
+
+        .toast.error {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+
+        @media (max-width: 768px) {
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .service-controls {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎵 Spotify Services</h1>
+            <p>Verwalte deine Spotify Mikroservices</p>
+        </div>
+
+        <div class="services-grid" id="servicesGrid">
+            <!-- Services werden hier dynamisch geladen -->
+        </div>
+
+        <div class="footer">
+            <p>Letzte Aktualisierung: <span id="lastUpdate">{{ current_time.strftime('%H:%M:%S') }}</span></p>
+        </div>
+    </div>
+
+    <script>
+    class ServiceDashboard {
+        constructor() {
+            this.services = {{ available_services | tojsonfilter }};
+            this.updateInterval = null;
+            this.init();
+        }
+
+        init() {
+            this.renderServices();
+            this.startAutoUpdate();
+        }
+
+        renderServices() {
+            const grid = document.getElementById('servicesGrid');
+            grid.innerHTML = '';
+
+            this.services.forEach(service => {
+                const serviceCard = this.createServiceCard(service);
+                grid.appendChild(serviceCard);
+            });
+
+            this.updateServiceStatus();
+        }
+
+        createServiceCard(service) {
+            const card = document.createElement('div');
+            card.className = 'service-card';
+            card.id = `service-${service.name}`;
+
+            const isComingSoon = service.description.includes('Coming Soon');
+
+            card.innerHTML = `
+                <div class="service-header">
+                    <div class="service-name">${this.escapeHtml(service.display_name)}</div>
+                    <div class="service-status">
+                        <div class="status-indicator status-stopped" id="status-${service.name}"></div>
+                        <span id="status-text-${service.name}">Gestoppt</span>
+                    </div>
+                </div>
+
+                <div class="service-info" id="info-${service.name}">
+                    <div class="info-row">
+                        <span class="info-label">Laufzeit:</span>
+                        <span class="info-value" id="uptime-${service.name}">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Fehler:</span>
+                        <span class="info-value" id="errors-${service.name}">0</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Gesundheit:</span>
+                        <span class="info-value" id="health-${service.name}">-</span>
+                    </div>
+                </div>
+
+                <div class="service-description">
+                    ${this.escapeHtml(service.description)}
+                </div>
+
+                <div class="service-controls">
+                    <button class="btn btn-start" onclick="dashboard.startService('${service.name}')"
+                            id="btn-start-${service.name}" ${isComingSoon ? 'disabled' : ''}>
+                        Start
+                    </button>
+                    <button class="btn btn-stop" onclick="dashboard.stopService('${service.name}')"
+                            id="btn-stop-${service.name}" ${isComingSoon ? 'disabled' : ''}>
+                        Stop
+                    </button>
+                    <button class="btn btn-restart" onclick="dashboard.restartService('${service.name}')"
+                            id="btn-restart-${service.name}" ${isComingSoon ? 'disabled' : ''}>
+                        Restart
+                    </button>
+                </div>
+
+                <div id="error-${service.name}"></div>
+            `;
+
+            return card;
+        }
+
+        async updateServiceStatus() {
+            try {
+                const response = await fetch('/api/services/status');
+                if (!response.ok) throw new Error('Failed to fetch status');
+
+                const servicesStatus = await response.json();
+
+                this.services.forEach(service => {
+                    const status = servicesStatus[service.name];
+                    this.updateServiceCard(service.name, status);
+                });
+
+                document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+
+            } catch (error) {
+                console.error('Error updating status:', error);
+                this.showToast('Fehler beim Laden des Service-Status', 'error');
+            }
+        }
+
+        updateServiceCard(serviceName, status) {
+            const statusIndicator = document.getElementById(`status-${serviceName}`);
+            const statusText = document.getElementById(`status-text-${serviceName}`);
+            const uptime = document.getElementById(`uptime-${serviceName}`);
+            const errors = document.getElementById(`errors-${serviceName}`);
+            const health = document.getElementById(`health-${serviceName}`);
+            const errorDiv = document.getElementById(`error-${serviceName}`);
+
+            if (!status) {
+                // Service nicht gefunden/gestoppt
+                statusIndicator.className = 'status-indicator status-stopped';
+                statusText.textContent = 'Gestoppt';
+                uptime.textContent = '-';
+                errors.textContent = '0';
+                health.textContent = '-';
+                errorDiv.innerHTML = '';
+                return;
+            }
+
+            // Status aktualisieren
+            const serviceStatus = status.status || 'unknown';
+            statusText.textContent = this.getStatusText(serviceStatus);
+
+            if (serviceStatus === 'running') {
+                statusIndicator.className = 'status-indicator status-running';
+            } else if (serviceStatus === 'error') {
+                statusIndicator.className = 'status-indicator status-error';
+            } else {
+                statusIndicator.className = 'status-indicator status-stopped';
+            }
+
+            // Informationen aktualisieren
+            uptime.textContent = this.formatUptime(status.uptime_seconds || 0);
+            errors.textContent = status.error_count || 0;
+            health.textContent = status.is_healthy ? '✅ Gesund' : '❌ Ungesund';
+
+            // Fehlermeldung anzeigen
+            if (status.last_error) {
+                errorDiv.innerHTML = `<div class="error-message">Letzter Fehler: ${this.escapeHtml(status.last_error)}</div>`;
+            } else {
+                errorDiv.innerHTML = '';
+            }
+        }
+
+        getStatusText(status) {
+            const statusMap = {
+                'running': 'Läuft',
+                'stopped': 'Gestoppt',
+                'starting': 'Startet...',
+                'stopping': 'Stoppt...',
+                'error': 'Fehler',
+                'unknown': 'Unbekannt'
+            };
+            return statusMap[status] || status;
+        }
+
+        formatUptime(seconds) {
+            if (seconds < 60) return `${seconds}s`;
+            if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            return `${hours}h ${minutes}m`;
+        }
+
+        async startService(serviceName) {
+            await this.controlService(serviceName, 'start');
+        }
+
+        async stopService(serviceName) {
+            await this.controlService(serviceName, 'stop');
+        }
+
+        async restartService(serviceName) {
+            await this.controlService(serviceName, 'restart');
+        }
+
+        async controlService(serviceName, action) {
+            const card = document.getElementById(`service-${serviceName}`);
+            card.classList.add('loading');
+
+            try {
+                const response = await fetch(`/api/service/${serviceName}/${action}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    this.showToast(result.message, 'success');
+                    // Status sofort aktualisieren
+                    setTimeout(() => this.updateServiceStatus(), 1000);
+                } else {
+                    this.showToast(result.message, 'error');
+                }
+
+            } catch (error) {
+                console.error(`Error ${action} service:`, error);
+                this.showToast(`Fehler beim ${action} des Services`, 'error');
+            } finally {
+                card.classList.remove('loading');
+            }
+        }
+
+        showToast(message, type) {
+            // Entferne existierende Toasts
+            const existingToast = document.querySelector('.toast');
+            if (existingToast) {
+                existingToast.remove();
+            }
+
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+
+            document.body.appendChild(toast);
+
+            // Animation
+            setTimeout(() => toast.classList.add('show'), 100);
+
+            // Auto-remove
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        startAutoUpdate() {
+            this.updateInterval = setInterval(() => {
+                this.updateServiceStatus();
+            }, 5000); // Update alle 5 Sekunden
+        }
+
+        stopAutoUpdate() {
+            if (this.updateInterval) {
+                clearInterval(this.updateInterval);
+                this.updateInterval = null;
+            }
+        }
+
+        escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    }
+
+    // Dashboard initialisieren
+    const dashboard = new ServiceDashboard();
+
+    // Cleanup bei Page Unload
+    window.addEventListener('beforeunload', () => {
+        dashboard.stopAutoUpdate();
+    });
+    </script>
+</body>
+</html>
