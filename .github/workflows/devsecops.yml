@@ -1,0 +1,385 @@
+name: 🚀 DevSecOps Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+    paths-ignore:
+      - 'README.md'
+      - 'docs/**'
+      - '*.md'
+  pull_request:
+    branches: [ main, master ]
+    types: [ opened, synchronize, reopened ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+# Security: Minimal permissions principle - CWE-250
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+  id-token: write
+
+# Security: CWE-200 - Information Exposure Prevention
+env:
+  DEPLOY_USER: pi
+  APP_NAME: spotify-bot
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # Security Analysis Phase
+  security-analysis:
+    name: 🔒 Security Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better analysis
+          
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.cache/pre-commit
+          key: ${{ runner.os }}-deps-${{ hashFiles('requirements.txt', '.pre-commit-config.yaml') }}
+          
+      - name: Install security tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install bandit[toml] safety semgrep ruff mypy
+          pip install -r requirements.txt
+          
+      - name: Run Bandit Security Scanner
+        run: |
+          echo "::group::Bandit Security Analysis"
+          bandit -r src/ -f json -o bandit-report.json || true
+          bandit -r src/ --severity-level medium --confidence-level medium
+          echo "::endgroup::"
+          
+      - name: Run Safety Vulnerability Check
+        run: |
+          echo "::group::Dependency Vulnerability Scan"
+          safety check --json --output safety-report.json || true
+          safety check --short-report
+          echo "::endgroup::"
+          
+      - name: Run Semgrep SAST
+        run: |
+          echo "::group::Static Application Security Testing"
+          semgrep --config=auto --json --output=semgrep-report.json src/ || true
+          semgrep --config=auto src/ --verbose
+          echo "::endgroup::"
+          
+      - name: Upload security reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: security-reports
+          path: |
+            bandit-report.json
+            safety-report.json
+            semgrep-report.json
+          retention-days: 30
+
+  # Code Quality Phase  
+  code-quality:
+    name: 🔍 Code Quality
+    runs-on: ubuntu-latest
+    needs: security-analysis
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          
+      - name: Install quality tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff black isort mypy
+          pip install -r requirements.txt
+          
+      - name: Run Ruff Linter
+        run: |
+          echo "::group::Ruff Linting"
+          ruff check src/ --output-format=github || true
+          echo "::endgroup::"
+          
+      - name: Run Black Code Formatter Check
+        run: |
+          echo "::group::Code Formatting Check"
+          black --check --diff src/ || true
+          echo "::endgroup::"
+          
+      - name: Run Import Sorting Check
+        run: |
+          echo "::group::Import Order Check"
+          isort --check-only --diff src/ || true
+          echo "::endgroup::"
+          
+      - name: Run Type Checking
+        run: |
+          echo "::group::Type Analysis"
+          mypy src/ --ignore-missing-imports --show-error-codes || true
+          echo "::endgroup::"
+
+  # Build and Test Phase
+  build-test:
+    name: 🔨 Build & Test
+    runs-on: ubuntu-latest
+    needs: [security-analysis, code-quality]
+    
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11']
+        
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          
+      - name: Create virtual environment
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Test configuration loading
+        run: |
+          source venv/bin/activate
+          python -c "
+          import sys
+          sys.path.insert(0, 'src')
+          from src.core.config import ConfigManager
+          config = ConfigManager()
+          print('✅ Configuration loaded successfully')
+          "
+          
+      - name: Test logging system
+        run: |
+          source venv/bin/activate
+          python -c "
+          import sys
+          sys.path.insert(0, 'src')
+          from src.utils.logging_setup import SecureLoggingSetup
+          logger = SecureLoggingSetup.get_logger('test')
+          logger.info('Test log message')
+          print('✅ Logging system working')
+          "
+          
+      - name: Test service imports
+        run: |
+          source venv/bin/activate
+          python -c "
+          import sys
+          sys.path.insert(0, 'src')
+          from src.services.watchdog_service import SpotifyWatchdogService
+          from src.utils.email_notifier import EmailNotifier
+          print('✅ All services importable')
+          "
+
+  # Container Security (if Docker is used)
+  container-security:
+    name: 🐳 Container Security
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Run Trivy filesystem scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # Deployment Phase
+  deploy:
+    name: 🚀 Deploy to Raspberry Pi
+    runs-on: ubuntu-latest
+    needs: [security-analysis, code-quality, build-test]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
+    environment: 
+      name: ${{ github.event.inputs.environment || 'production' }}
+      url: ${{ secrets.APP_URL }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup SSH key
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+          
+      - name: Add Raspberry Pi to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || echo "Host key scan failed - continuing anyway"
+          
+      - name: Test SSH connection
+        run: |
+          ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} "echo 'SSH connection successful'"
+          
+      - name: Create production configuration
+        run: |
+          # Create production config from template
+          cp config/config.json config/config.production.json
+          
+          # Update production settings securely
+          python3 << 'EOF'
+          import json
+          import os
+          
+          # Load base config
+          with open('config/config.production.json', 'r') as f:
+              config = json.load(f)
+          
+          # Update for production
+          config['callback_server']['debug'] = False
+          config['logging']['level'] = 'INFO'
+          config['logging']['console_enabled'] = False  # Only file logging in production
+          
+          # Update email settings if secrets are available
+          if os.getenv('SMTP_PASSWORD'):
+              config['email_notifications']['sender_password'] = os.getenv('SMTP_PASSWORD')
+          if os.getenv('SENDER_EMAIL'):
+              config['email_notifications']['sender_email'] = os.getenv('SENDER_EMAIL')
+          if os.getenv('RECIPIENT_EMAIL'):
+              config['email_notifications']['recipient_email'] = os.getenv('RECIPIENT_EMAIL')
+          
+          # Save updated config
+          with open('config/config.production.json', 'w') as f:
+              json.dump(config, f, indent=2)
+          
+          print("✅ Production configuration created")
+          EOF
+        env:
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+          
+      - name: Deploy application
+        run: |
+          chmod +x deploy/deploy.sh
+          ./deploy/deploy.sh
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ env.DEPLOY_USER }}
+          
+      - name: Verify deployment
+        run: |
+          echo "🔍 Verifying deployment..."
+          
+          # Check service status
+          ssh ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} "
+            sudo systemctl is-active spotify-bot && echo '✅ Service is running' || echo '❌ Service is not running'
+            sudo systemctl status spotify-bot --no-pager --lines=5
+          "
+          
+          # Check application logs for errors
+          ssh ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} "
+            echo '📋 Recent application logs:'
+            cd /opt/spotify-bot
+            find logs/ -name '*.log' -exec tail -n 5 {} + 2>/dev/null || echo 'No application logs found'
+          "
+          
+      - name: Create deployment summary
+        run: |
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Target**: ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" >> $GITHUB_STEP_SUMMARY  
+          echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: ${{ github.event.inputs.environment || 'production' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deployed at**: $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Service Status" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          ssh ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} "sudo systemctl status spotify-bot --no-pager --lines=3" >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "Status check failed" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+  # Rollback capability
+  rollback:
+    name: 🔄 Rollback
+    runs-on: ubuntu-latest
+    if: failure() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    needs: deploy
+    
+    steps:
+      - name: Setup SSH key
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+          
+      - name: Rollback deployment
+        run: |
+          echo "🔄 Performing rollback..."
+          ssh ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} "
+            cd /opt
+            
+            # Stop current service
+            sudo systemctl stop spotify-bot || true
+            
+            # Restore from backup if available
+            if [ -d 'spotify-bot.backup' ]; then
+              sudo rm -rf spotify-bot
+              sudo mv spotify-bot.backup spotify-bot
+              sudo systemctl start spotify-bot
+              echo '✅ Rollback completed'
+            else
+              echo '❌ No backup available for rollback'
+              exit 1
+            fi
+          "
+
+  # Notification
+  notify:
+    name: 📢 Notify
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    if: always() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    
+    steps:
+      - name: Notify on success
+        if: needs.deploy.result == 'success'
+        run: |
+          echo "✅ Deployment successful!"
+          
+      - name: Notify on failure  
+        if: needs.deploy.result == 'failure'
+        run: |
+          echo "❌ Deployment failed!"
+          exit 1
