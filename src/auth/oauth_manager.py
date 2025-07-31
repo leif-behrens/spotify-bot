@@ -48,16 +48,9 @@ class SpotifyOAuthManager:
 
             logger.info("No valid token found, starting authorization process...")
 
-            # 2. Prüfe ob headless System (kein Display verfügbar)
-            import os
-            is_headless = not (os.environ.get('DISPLAY') or os.environ.get('WAYLAND_DISPLAY'))
-            
-            if is_headless:
-                logger.info("Headless system detected - using manual authorization flow")
-                return self._perform_headless_oauth()
-            else:
-                logger.info("Display available - using callback server flow")
-                return self._perform_callback_oauth()
+            # 2. Forciere headless OAuth für alle Systeme (bis Callback-Problem gelöst)
+            logger.info("Using manual authorization flow (headless mode)")
+            return self._perform_headless_oauth()
 
             logger.info("[OK] Authorization completed successfully")
             return True
