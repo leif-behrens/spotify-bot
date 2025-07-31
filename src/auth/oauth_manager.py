@@ -48,23 +48,16 @@ class SpotifyOAuthManager:
 
             logger.info("No valid token found, starting authorization process...")
 
-            # 2. Starte Callback-Server
-            from ..services.callback_server import SpotifyCallbackServer
-
-            callback_server = SpotifyCallbackServer()
-            if not callback_server.start_background():
-                logger.error("Failed to start callback server")
-                return False
-
-            # 3. Führe OAuth-Flow durch
-            if not self._perform_oauth_flow(callback_server):
-                logger.error("OAuth flow failed")
-                return False
-
-            # 4. Warte auf Token
-            if not self._wait_for_token(callback_server):
-                logger.error("Failed to receive token")
-                return False
+            # 2. Prüfe ob headless System (kein Display verfügbar)
+            import os
+            is_headless = not (os.environ.get('DISPLAY') or os.environ.get('WAYLAND_DISPLAY'))
+            
+            if is_headless:
+                logger.info("Headless system detected - using manual authorization flow")
+                return self._perform_headless_oauth()
+            else:
+                logger.info("Display available - using callback server flow")
+                return self._perform_callback_oauth()
 
             logger.info("[OK] Authorization completed successfully")
             return True
@@ -200,6 +193,97 @@ class SpotifyOAuthManager:
 
         except Exception as e:
             logger.error(f"Token exchange error: {e}")
+            print(f"❌ Authorization error: {e}")
+            return False
+
+    def _perform_callback_oauth(self) -> bool:
+        """Führt OAuth mit Callback-Server durch (für Systeme mit Display)"""
+        try:
+            # Starte Callback-Server
+            from ..services.callback_server import SpotifyCallbackServer
+
+            callback_server = SpotifyCallbackServer()
+            if not callback_server.start_background():
+                logger.error("Failed to start callback server")
+                return False
+
+            # Führe OAuth-Flow durch
+            if not self._perform_oauth_flow(callback_server):
+                logger.error("OAuth flow failed")
+                return False
+
+            # Warte auf Token
+            if not self._wait_for_token(callback_server):
+                logger.error("Failed to receive token")
+                return False
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Callback OAuth failed: {e}")
+            return False
+
+    def _perform_headless_oauth(self) -> bool:
+        """Führt OAuth für headless Systeme durch (manuelle URL-Eingabe)"""
+        try:
+            print("\n🤖 HEADLESS AUTHORIZATION")
+            print("=" * 50)
+            print("Since no display is available, manual authorization is required.")
+            print()
+
+            # Generiere Auth-URL
+            import urllib.parse
+            import secrets
+            
+            spotify_config = self.config.spotify
+            oauth_config = self.config.get_oauth_config()
+            
+            # State für CSRF-Schutz
+            state = secrets.token_urlsafe(16)
+            
+            params = {
+                'client_id': spotify_config.client_id,
+                'response_type': 'code',
+                'redirect_uri': spotify_config.redirect_uri,
+                'scope': oauth_config['scope'],
+                'state': state,
+                'show_dialog': 'true'
+            }
+            
+            auth_url = 'https://accounts.spotify.com/authorize?' + urllib.parse.urlencode(params)
+            
+            print("1. Copy this URL and open it in your browser (computer/phone):")
+            print(f"   {auth_url}")
+            print()
+            print("2. Complete the Spotify authorization")
+            print("3. After authorization, you'll be redirected to a localhost URL that won't work")
+            print("4. Copy the ENTIRE redirect URL from your browser's address bar and paste it here")
+            print("=" * 50)
+            
+            # Warte auf manuelle URL-Eingabe
+            redirect_url = input("\nPaste the complete redirect URL here: ").strip()
+            
+            # Extrahiere Code aus der URL
+            if "code=" in redirect_url:
+                import urllib.parse
+                parsed = urllib.parse.urlparse(redirect_url)
+                params = urllib.parse.parse_qs(parsed.query)
+                
+                if 'code' in params:
+                    auth_code = params['code'][0]
+                    print(f"\n✅ Authorization code extracted successfully!")
+                    
+                    # Tausche Code gegen Token
+                    return self._exchange_code_for_token(auth_code)
+                else:
+                    print("❌ No authorization code found in URL")
+                    return False
+            else:
+                print("❌ Invalid redirect URL format")
+                return False
+
+        except Exception as e:
+            logger.error(f"Headless OAuth failed: {e}")
             print(f"❌ Authorization error: {e}")
             return False
 
