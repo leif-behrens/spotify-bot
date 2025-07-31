@@ -14,7 +14,9 @@ import requests
 from ..core.config import ConfigManager
 from .token_storage import SecureTokenStorage
 
-logger = logging.getLogger(__name__)
+from ..utils.logging_setup import LoggingSetup
+
+logger = LoggingSetup.get_logger(__name__)
 
 
 class SpotifyOAuthManager:

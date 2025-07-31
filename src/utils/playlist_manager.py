@@ -10,7 +10,9 @@ from typing import Any, Dict, Optional
 
 import spotipy
 
-logger = logging.getLogger(__name__)
+from .logging_setup import LoggingSetup
+
+logger = LoggingSetup.get_logger(__name__)
 
 
 class PlaylistManager:

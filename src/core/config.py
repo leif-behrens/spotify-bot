@@ -14,6 +14,8 @@ from typing import Any, Dict, Optional
 from dotenv import load_dotenv
 from jsonschema import ValidationError, validate
 
+import logging
+
 logger = logging.getLogger(__name__)
 
 CONFIG_SCHEMA = {
@@ -69,8 +71,22 @@ CONFIG_SCHEMA = {
             },
             "required": ["scope", "state_length"],
         },
+        "logging": {
+            "type": "object",
+            "properties": {
+                "level": {
+                    "type": "string", 
+                    "enum": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+                },
+                "format": {"type": "string", "minLength": 10},
+                "file_enabled": {"type": "boolean"},
+                "file_path": {"type": "string"},
+                "console_enabled": {"type": "boolean"},
+            },
+            "required": ["level", "format", "file_enabled", "console_enabled"],
+        },
     },
-    "required": ["monitoring", "playlist", "service", "callback_server", "oauth"],
+    "required": ["monitoring", "playlist", "service", "callback_server", "oauth", "logging"],
 }
 
 
@@ -203,3 +219,7 @@ class ConfigManager:
     def get_oauth_config(self) -> Dict[str, Any]:
         """Gibt OAuth-Konfiguration zurück"""
         return self.config["oauth"]
+
+    def get_logging_config(self) -> Dict[str, Any]:
+        """Gibt Logging-Konfiguration zurück"""
+        return self.config["logging"]

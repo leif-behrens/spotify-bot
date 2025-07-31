@@ -23,5 +23,12 @@
   "oauth": {
     "scope": "user-read-currently-playing user-read-playback-state playlist-modify-public playlist-modify-private playlist-read-private user-library-read",
     "state_length": 16
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    "file_enabled": false,
+    "file_path": "data/spotify-bot.log",
+    "console_enabled": true
   }
 }

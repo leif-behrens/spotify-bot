@@ -9,7 +9,6 @@ Sicherheitsfeatures:
 - CWE-532: Information Exposure Prevention - Sichere Logging-Praktiken
 """
 
-import logging
 import os
 import time
 from typing import Any, Dict, Optional
@@ -18,12 +17,10 @@ import spotipy
 
 from ..auth.oauth_manager import SpotifyOAuthManager
 from ..core.config import ConfigManager
+from ..utils.logging_setup import LoggingSetup
 
-# Logging Setup - CWE-532: Information Exposure Prevention
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
+# Initialize logging
+logger = LoggingSetup.get_logger(__name__)
 
 
 class SpotifyDiscoveryService:

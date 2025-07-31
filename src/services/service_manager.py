@@ -4,7 +4,6 @@ CWE-78: OS Command Injection Prevention, CWE-754: Comprehensive Error Handling
 Security: Follows OpenSSF Secure Coding Guidelines
 """
 
-import logging
 import os
 import subprocess
 import sys
@@ -14,11 +13,10 @@ from typing import Optional
 
 import psutil
 
-# Logging setup - CWE-532: Information Exposure Prevention
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
+from ..utils.logging_setup import LoggingSetup
+
+# Initialize logging
+logger = LoggingSetup.get_logger(__name__)
 
 
 class SpotifyServiceManager:

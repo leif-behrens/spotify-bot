@@ -13,7 +13,9 @@ from typing import Optional
 
 from cryptography.fernet import Fernet
 
-logger = logging.getLogger(__name__)
+from ..utils.logging_setup import LoggingSetup
+
+logger = LoggingSetup.get_logger(__name__)
 
 
 class SecureTokenStorage:
