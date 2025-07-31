@@ -120,7 +120,7 @@ User=${DEPLOY_USER}
 Group=${DEPLOY_USER}
 WorkingDirectory=${APP_DIR}
 Environment=PATH=${APP_DIR}/venv/bin
-ExecStart=${APP_DIR}/venv/bin/python main.py service start discovery
+ExecStart=${APP_DIR}/venv/bin/python main.py start discovery
 ExecReload=/bin/kill -HUP \$MAINPID
 Restart=always
 RestartSec=10

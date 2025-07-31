@@ -156,6 +156,53 @@ class SpotifyOAuthManager:
             logger.error(f"Token refresh error: {e}")
             return None
 
+    def _exchange_code_for_token(self, auth_code: str) -> bool:
+        """Tauscht Authorization Code gegen Access Token"""
+        try:
+            spotify_config = self.config.spotify
+
+            token_params = {
+                "grant_type": "authorization_code",
+                "code": auth_code,
+                "redirect_uri": spotify_config.redirect_uri,
+                "client_id": spotify_config.client_id,
+                "client_secret": spotify_config.client_secret,
+            }
+
+            response = requests.post(
+                "https://accounts.spotify.com/api/token",
+                data=token_params,
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                timeout=10,
+            )
+
+            if response.status_code == 200:
+                token_info = response.json()
+
+                # Add expires_at timestamp
+                if "expires_in" in token_info:
+                    token_info["expires_at"] = time.time() + token_info["expires_in"]
+
+                # Speichere Token sicher
+                if self.token_storage.save_token(token_info):
+                    logger.info("✅ Token exchange successful - authorization complete!")
+                    print("\n🎉 SUCCESS! Spotify authorization completed!")
+                    print("Your bot is now ready to use.")
+                    return True
+                else:
+                    logger.error("Failed to save token")
+                    print("❌ Failed to save authorization token")
+                    return False
+            else:
+                logger.error(f"Token exchange failed: {response.status_code} - {response.text}")
+                print(f"❌ Authorization failed: {response.status_code}")
+                return False
+
+        except Exception as e:
+            logger.error(f"Token exchange error: {e}")
+            print(f"❌ Authorization error: {e}")
+            return False
+
     def _test_spotify_connection(self, access_token: str) -> bool:
         """Testet Spotify-Verbindung mit Token"""
         try:
@@ -195,13 +242,46 @@ class SpotifyOAuthManager:
             print(auth_url)
             print("=" * 60 + "\n")
 
-            # Öffne Browser automatisch
+            # Versuche Browser zu öffnen (nur wenn Display verfügbar)
             try:
-                webbrowser.open(auth_url)
-                logger.info("Browser opened successfully")
+                import os
+                if os.environ.get('DISPLAY') or os.environ.get('WAYLAND_DISPLAY'):
+                    webbrowser.open(auth_url)
+                    logger.info("Browser opened successfully")
+                else:
+                    raise Exception("No display available (headless system)")
             except Exception as e:
-                logger.warning(f"Failed to open browser automatically: {e}")
-                print(f"Please manually open: {auth_url}")
+                logger.info(f"Headless system detected: {e}")
+                print("\n🤖 HEADLESS AUTHORIZATION INSTRUCTIONS:")
+                print("=" * 50)
+                print("1. Copy this URL to your computer/phone browser:")
+                print(f"   {auth_url}")
+                print("\n2. Complete the Spotify authorization")
+                print("3. After authorization, you'll be redirected to a localhost URL")
+                print("4. Copy the ENTIRE redirect URL and paste it here")
+                print("=" * 50)
+                
+                # Warte auf manuelle URL-Eingabe
+                redirect_url = input("\nPaste the complete redirect URL here: ").strip()
+                
+                # Extrahiere Code aus der URL
+                if "code=" in redirect_url:
+                    import urllib.parse
+                    parsed = urllib.parse.urlparse(redirect_url)
+                    params = urllib.parse.parse_qs(parsed.query)
+                    
+                    if 'code' in params:
+                        auth_code = params['code'][0]
+                        print(f"\n✅ Authorization code extracted successfully!")
+                        
+                        # Simuliere Callback durch direkten Token-Austausch
+                        return self._exchange_code_for_token(auth_code)
+                    else:
+                        print("❌ No authorization code found in URL")
+                        return False
+                else:
+                    print("❌ Invalid redirect URL format")
+                    return False
 
             return True
 

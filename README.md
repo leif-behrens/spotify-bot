@@ -1,183 +1,277 @@
-# Spotify Auto-Discovery Bot - Microservices Edition
+# 🎵 Spotify Auto-Discovery Bot
 
-Ein sicherer Spotify Bot, der automatisch Songs zu einer Playlist hinzufügt, basierend auf Ihrem Hörverhalten. Implementiert als Microservices-Architektur mit Security-First Ansatz.
+Ein sicherer DevSecOps-kompatibler Spotify Bot, der automatisch Songs zu einer Playlist hinzufügt basierend auf deinem Hörverhalten. Entwickelt mit Security-First Ansatz und modernen CI/CD Praktiken.
 
-## 🚀 Features
+## ✨ Features
 
-- **Automatische Song-Erkennung**: Überwacht Spotify-Wiedergabe und fügt Songs automatisch zu einer Playlist hinzu
-- **Sichere Authentifizierung**: OAuth2-basierte Spotify-Authentifizierung mit verschlüsselter Token-Speicherung
-- **Microservices-Architektur**: Separate Services für verschiedene Funktionen
-- **Web Dashboard**: Benutzerfreundliches Interface zur Service-Verwaltung
-- **Security-First**: Implementiert nach OWASP und OpenSSF Security Standards
+- 🎯 **Automatische Song-Erkennung**: Überwacht Spotify-Wiedergabe und fügt Songs automatisch zu einer Playlist hinzu
+- 🔒 **DevSecOps Pipeline**: Vollständige CI/CD mit Sicherheitsscans (Bandit, Safety, CodeQL)
+- 🛡️ **Security-First**: OpenSSF-konform mit CWE-Präventionsmaßnahmen
+- 🤖 **Service-Architektur**: Discovery, Callback und Watchdog Services
+- 📱 **Headless-Ready**: Funktioniert auf Raspberry Pi ohne Desktop
+- 🔄 **Auto-Recovery**: Watchdog überwacht Services und startet sie bei Bedarf neu
+- 📧 **Email-Benachrichtigungen**: Optional für Service-Ausfälle
+- 📊 **Konfigurierbare Logs**: Service-spezifisches Logging mit verschiedenen Levels
 
 ## 🏗️ Architektur
 
 ### Services
+- **Discovery Service**: Überwacht Spotify-Wiedergabe und fügt Tracks zur Playlist hinzu
+- **Callback Service**: Behandelt Spotify OAuth-Callbacks  
+- **Watchdog Service**: Überwacht andere Services und startet sie bei Ausfällen neu
 
-1. **Callback Service** (`services/callback/`)
-   - Port: 4444
-   - Handles Spotify OAuth callbacks
-   - Provides authentication tokens
-
-2. **Discovery Service** (`services/discovery/`)
-   - Monitors Spotify playback
-   - Adds tracks to target playlist
-   - Requires authentication
-
-3. **Dashboard** (`dashboard.py`)
-   - Port: 5000
-   - Web-based service management
-   - Real-time status monitoring
+### Security Features
+- 🔐 OAuth2-basierte Spotify-Authentifizierung mit verschlüsselter Token-Speicherung
+- 🛡️ CWE-20 Input Validation, CWE-22 Path Traversal Prevention
+- 🔒 CWE-532 Information Exposure Prevention in Logs
+- 🚫 CWE-798 Hard-coded Credentials Prevention
+- 📋 Bandit, Safety, CodeQL Security Scanning
 
 ## 📋 Voraussetzungen
 
-- Python 3.8+
-- Spotify Developer Account
-- Spotify Premium Account (für Playbook-Monitoring)
+- **Python 3.11+**
+- **Spotify Developer Account** (kostenlos)
+- **Spotify Premium Account** (für Playback-Monitoring)
+- **Raspberry Pi** (empfohlen) oder Linux/Windows/macOS
 
-## ⚙️ Installation & Setup
+## ⚙️ Spotify App Setup
 
-### 1. Repository klonen und Dependencies installieren
+1. Gehe zu [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+2. Erstelle eine neue App
+3. Notiere dir **Client ID** und **Client Secret**
+4. Füge diese **Redirect URI** hinzu: `http://localhost:4444/callback`
+
+## 🚀 Installation
+
+### Option 1: Raspberry Pi Deployment (Empfohlen)
 
 ```bash
-git clone <repository-url>
+# 1. Repository klonen
+git clone https://github.com/YOUR-USERNAME/spotify-bot.git
 cd spotify-bot
+
+# 2. Lokales Deployment ausführen
+chmod +x deploy/local-deploy.sh
+sudo ./deploy/local-deploy.sh
+```
+
+Das Deployment-Script:
+- ✅ Erstellt `/opt/spotify-bot/` mit sicheren Berechtigungen
+- ✅ Richtet Python Virtual Environment ein
+- ✅ Installiert alle Dependencies
+- ✅ Erstellt systemd Service für automatischen Start
+- ✅ Erstellt `.env` Template für Credentials
+
+### Option 2: Manuelle Installation
+
+```bash
+# Repository klonen und Dependencies installieren
+git clone https://github.com/YOUR-USERNAME/spotify-bot.git
+cd spotify-bot
+python3 -m venv venv
+source venv/bin/activate  # Linux/macOS
+# venv\Scripts\activate   # Windows
 pip install -r requirements.txt
 ```
 
-### 2. Spotify App erstellen
+## 🔧 Konfiguration
 
-1. Gehen Sie zu [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
-2. Erstellen Sie eine neue App
-3. Notieren Sie sich Client ID und Client Secret
-4. Fügen Sie `http://127.0.0.1:4444/callback` als Redirect URI hinzu
+### 1. Environment Variables (.env)
+```bash
+# Nach Deployment bearbeiten:
+sudo nano /opt/spotify-bot/.env
 
-### 3. Environment Variables konfigurieren
-
-Bearbeiten Sie `.env`:
+# Oder bei manueller Installation:
+cp .env.template .env
+nano .env
+```
 
 ```env
-# Spotify API Credentials
-SPOTIFY_CLIENT_ID=your_client_id_here
-SPOTIFY_CLIENT_SECRET=your_client_secret_here
-SPOTIFY_REDIRECT_URI=http://127.0.0.1:4444/callback
+# Spotify API Credentials (Erforderlich)
+SPOTIFY_CLIENT_ID=deine_client_id_hier
+SPOTIFY_CLIENT_SECRET=dein_client_secret_hier  
+SPOTIFY_REDIRECT_URI=http://localhost:4444/callback
 
-# Flask Configuration
-FLASK_SECRET_KEY=your_secure_secret_key_here
-FLASK_HOST=127.0.0.1
-FLASK_PORT=5000
-FLASK_DEBUG=False
+# Email Benachrichtigungen (Optional)
+SENDER_EMAIL=deine_email@gmail.com
+SENDER_PASSWORD=dein_app_passwort_hier
+RECIPIENT_EMAIL=benachrichtigung@gmail.com
 ```
 
-## 🚀 Schnellstart
-
-### Process-basierte Mikroservice-Architektur (Neu!)
-
-**Services als eigenständige Prozesse - unabhängig vom Dashboard:**
-
+### 2. Config.json Anpassungen (Optional)
 ```bash
-# 1. Service-Daemon starten (läuft dauerhaft)
-python service_controller.py start discovery
-
-# 2. Dashboard starten (nur UI - optional)
-python dashboard_app.py
-
-# Dashboard öffnen: http://localhost:5000
+sudo nano /opt/spotify-bot/config/config.json
 ```
 
-**Service-Management per CLI:**
-```bash
-python service_controller.py list      # Services auflisten
-python service_controller.py start discovery  # Service starten
-python service_controller.py stop discovery   # Service stoppen
-python service_controller.py status discovery # Service-Status
-```
-
-### In-Process Architektur (Legacy)
-
-```bash
-# Alle Services in einem Prozess (alte Architektur)
-python app.py
-```
-
-### Alte Monolith-Anwendung (deprecated)
-
-```bash
-# Fallback zur ursprünglichen Anwendung
-python -m src.main
-```
-
-## Konfiguration
-
-### config.json
-- `check_interval_seconds`: Überwachungsintervall (Standard: 5s)
-- `minimum_play_duration_seconds`: Mindestabspielzeit (Standard: 30s)
+Wichtige Einstellungen:
+- `monitoring.check_interval_seconds`: Überwachungsintervall (Standard: 5s)
+- `monitoring.minimum_play_duration_seconds`: Mindestspielzeit (Standard: 30s)
 - `playlist.name`: Name der Auto-Playlist
+- `logging.services`: Log-Level pro Service
 
-### Umgebungsvariablen (.env)
-- `SPOTIFY_CLIENT_ID`: Deine Spotify App Client ID
-- `SPOTIFY_CLIENT_SECRET`: Deine Spotify App Client Secret
-- `SPOTIFY_REDIRECT_URI`: OAuth Redirect URI
+## 🎵 Spotify Autorisierung
 
-## 🏗️ Mikroservice-Architektur Evolution
-
-### 🆕 **Process-basierte Architektur (Empfohlen)**
-```
-📁 Echte Mikroservices - Services als separate Prozesse
-├── service_controller.py     # CLI für Service-Management
-├── dashboard_app.py          # Dashboard-Only Application
-├── ipc/                      # Inter-Process Communication
-│   ├── communication.py      # IPC Protocol (TCP Sockets)
-│   └── service_registry.json # Persistent Service State
-├── services/
-│   └── discovery/
-│       ├── service.py        # Service-Logik
-│       └── daemon.py         # Service als Daemon-Prozess
-└── dashboard/templates/      # Dashboard UI
-
-Vorteile:
-✅ Services laufen unabhängig vom Dashboard
-✅ Dashboard-Crash stoppt keine Services
-✅ Services können remote verwaltet werden
-✅ Bessere Skalierbarkeit und Isolation
+### Headless (Raspberry Pi)
+```bash
+cd /opt/spotify-bot
+sudo -u $USER ./venv/bin/python main.py auth
 ```
 
-### 📦 **In-Process Architektur (Legacy)**
+Bei headless Systemen:
+1. **URL kopieren** und in Browser auf Computer/Handy öffnen
+2. **Spotify autorisieren**
+3. **Komplette Redirect-URL** zurück ins Terminal kopieren
+4. ✅ **Automatische Token-Extraktion**
+
+### Mit Desktop
+Der Browser öffnet sich automatisch zur Autorisierung.
+
+## 🎮 Service Management
+
+### Systemd Services (Nach Deployment)
+```bash
+# Service Status prüfen
+sudo systemctl status spotify-bot
+
+# Service steuern
+sudo systemctl start spotify-bot
+sudo systemctl stop spotify-bot
+sudo systemctl restart spotify-bot
+
+# Logs ansehen
+sudo journalctl -u spotify-bot -f
+tail -f /opt/spotify-bot/logs/*.log
 ```
-📁 Services in einem Prozess (Alte Architektur)
-├── app.py                    # Hauptanwendung
-├── core/                     # Kern-Framework
-│   ├── service_base.py       # Basis-Klasse für Services
-│   └── service_manager.py    # Service Registry & Manager
-└── dashboard/                # Management-Dashboard
-    ├── service_control.py    # Dashboard-Controller
-    └── templates/            # HTML-Templates
+
+### Manuelle Steuerung
+```bash
+cd /opt/spotify-bot  # oder dein Projekt-Ordner
+
+# Services einzeln starten
+./venv/bin/python main.py start discovery
+./venv/bin/python main.py start callback  
+./venv/bin/python main.py start watchdog
+
+# Status prüfen
+./venv/bin/python main.py status
+
+# Services stoppen
+./venv/bin/python main.py stop discovery
+./venv/bin/python main.py stop callback
+./venv/bin/python main.py stop watchdog
 ```
 
-### 🗂️ **Monolith (Deprecated)**
+## 🔄 Updates
+
+### Automatisches Update (Raspberry Pi)
+```bash
+cd ~/spotify-bot
+git pull origin main
+sudo ./deploy/local-deploy.sh  # Führt automatisches Update durch
 ```
-📁 Original Single-Application
-└── src/                      # Alte Monolith-Architektur
-    ├── main.py               # Ursprüngliche Anwendung
-    ├── dashboard.py          # Altes Dashboard
-    └── ...                   # Legacy-Code
+
+### Manuelles Update
+```bash
+git pull origin main
+source venv/bin/activate
+pip install -r requirements.txt
+# Services neustarten
 ```
 
-## 🔒 Security Standards
+## 🛡️ DevSecOps Pipeline
 
-Diese Mikroservice-Plattform implementiert:
-- **OpenSSF Secure Coding Guidelines**: Sichere Entwicklungspraktiken
-- **OWASP Developer Guide**: Web-Security Best Practices
-- **CWE Common Weakness Enumeration**: Schwachstellen-Prävention
-- **Bandit Security Linter**: Automatisierte Sicherheitstests
-- **DevSecOps Integration**: CI/CD Pipeline mit Security Scanning
+Bei jedem Git Push werden automatisch ausgeführt:
 
-### Neue Security Features in der Mikroservice-Architektur
-- **Service Isolation**: Jeder Service läuft isoliert mit eigener Fehlerbehandlung
-- **Centralized Logging**: Sichere, strukturierte Logs ohne sensible Daten
-- **Health Monitoring**: Automatische Überwachung und Restart bei Fehlern
-- **Input Sanitization**: Umfassende Validierung aller Service-Parameter
+### 🔒 Security & Quality Phase
+- **Bandit**: Python Security Scanner
+- **Safety**: Dependency Vulnerability Scanner  
+- **Flake8**: Code Style & Quality
+- **MyPy**: Type Checking
 
-## Lizenz
+### 🔨 Build & Test Phase
+- **Configuration Loading**: Validierung aller Configs
+- **Service Import Tests**: Überprüfung aller Module
+- **Virtual Environment**: Build-Test
 
-MIT License
+### 🚀 Deployment Phase
+- **Lokale Netzwerke**: Deployment wird übersprungen (wie bei deinem Pi)
+- **Public Hosts**: Automatisches Deployment via SSH (falls konfiguriert)
+
+## 📁 Projekt-Struktur
+
+```
+spotify-bot/
+├── 🚀 main.py                     # Haupt-CLI Interface
+├── 📊 config/
+│   ├── config.json               # Haupt-Konfiguration
+│   └── config.production.json    # Produktions-Config
+├── 🔧 src/
+│   ├── auth/                     # OAuth & Token Management
+│   ├── services/                 # Discovery, Callback, Watchdog
+│   ├── core/                     # Config & Base Classes
+│   └── utils/                    # Logging, Email, Helpers
+├── 🚀 deploy/
+│   ├── local-deploy.sh          # Raspberry Pi Deployment
+│   └── deploy.sh                # Remote SSH Deployment
+├── 🔒 .github/workflows/
+│   ├── devsecops.yml           # Haupt CI/CD Pipeline
+│   └── codeql-analysis.yml     # Security Code Analysis
+└── 📋 requirements.txt
+```
+
+## 🆘 Troubleshooting
+
+### Service startet nicht
+```bash
+# Detaillierte Logs ansehen
+sudo journalctl -u spotify-bot --no-pager -l
+
+# Konfiguration testen
+cd /opt/spotify-bot
+./venv/bin/python -c "from src.core.config import ConfigManager; ConfigManager()"
+```
+
+### OAuth-Probleme
+```bash
+# Token-Status prüfen
+./venv/bin/python -c "
+from src.auth.oauth_manager import SpotifyOAuthManager
+oauth = SpotifyOAuthManager()
+print('Valid token:', oauth._has_valid_token())
+"
+
+# Neue Autorisierung erzwingen
+./venv/bin/python main.py auth
+```
+
+### Port bereits belegt
+```bash
+sudo lsof -i :4444
+sudo pkill -f "python.*main.py"
+```
+
+### Permission-Fehler
+```bash
+sudo chown -R $USER:$USER /opt/spotify-bot
+```
+
+## 🎯 Nächste Schritte nach Installation
+
+1. **✅ Spotify Credentials konfigurieren** (`.env` bearbeiten)
+2. **🔐 OAuth Autorisierung durchführen** (`main.py auth`)
+3. **▶️ Services starten** (automatisch via systemd oder manuell)
+4. **🎵 Spotify abspielen** und beobachten wie Songs automatisch hinzugefügt werden!
+
+## 🔗 Links
+
+- [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+- [OpenSSF Secure Coding Guidelines](https://github.com/ossf/wg-best-practices-os-developers)
+- [OWASP Developer Guide](https://owasp.org/www-project-developer-guide/)
+
+## 📄 Lizenz
+
+MIT License - Siehe [LICENSE](LICENSE) für Details.
+
+---
+
+**🚀 Entwickelt mit DevSecOps Best Practices | 🛡️ Security-First Approach | 🤖 CI/CD Ready**
