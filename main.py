@@ -13,9 +13,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from src.auth.oauth_manager import SpotifyOAuthManager
+from src.services.callback_server import SpotifyCallbackServer
 from src.services.discovery_service import SpotifyDiscoveryService
 from src.services.service_manager import SpotifyServiceManager
-from src.services.callback_server import SpotifyCallbackServer
 
 
 def handle_auth():
@@ -51,20 +51,24 @@ def handle_service_command(command: str, service_name: str = None):
         if command == "start":
             if service_name:
                 success = manager.start(service_name)
-                service_desc = manager.services[service_name]['description']
+                service_desc = manager.services[service_name]["description"]
                 print(f"{service_desc}: {'started' if success else 'failed to start'}")
             else:
                 success = manager.start_all()
-                print(f"All services: {'started' if success else 'some failed to start'}")
+                print(
+                    f"All services: {'started' if success else 'some failed to start'}"
+                )
 
         elif command == "stop":
             if service_name:
                 success = manager.stop(service_name)
-                service_desc = manager.services[service_name]['description']
+                service_desc = manager.services[service_name]["description"]
                 print(f"{service_desc}: {'stopped' if success else 'failed to stop'}")
             else:
                 success = manager.stop_all()
-                print(f"All services: {'stopped' if success else 'some failed to stop'}")
+                print(
+                    f"All services: {'stopped' if success else 'some failed to stop'}"
+                )
 
         elif command == "status":
             if service_name:
@@ -81,20 +85,24 @@ def handle_service_command(command: str, service_name: str = None):
 
         elif command == "restart":
             if service_name:
-                service_desc = manager.services[service_name]['description']
+                service_desc = manager.services[service_name]["description"]
                 print(f"Stopping {service_desc}...")
                 manager.stop(service_name)
                 time.sleep(2)
                 print(f"Starting {service_desc}...")
                 success = manager.start(service_name)
-                print(f"{service_desc}: {'restarted' if success else 'failed to restart'}")
+                print(
+                    f"{service_desc}: {'restarted' if success else 'failed to restart'}"
+                )
             else:
                 print("Stopping all services...")
                 manager.stop_all()
                 time.sleep(2)
                 print("Starting all services...")
                 success = manager.start_all()
-                print(f"All services: {'restarted' if success else 'some failed to restart'}")
+                print(
+                    f"All services: {'restarted' if success else 'some failed to restart'}"
+                )
 
         elif command == "cleanup":
             count = manager.cleanup()
@@ -106,7 +114,7 @@ def handle_service_command(command: str, service_name: str = None):
             print("Press Ctrl+C to stop")
             service = SpotifyDiscoveryService()
             service.run()
-            
+
         elif command == "callback":
             # Run Callback Server directly (foreground)
             print("Starting Callback Server in foreground...")
@@ -151,10 +159,19 @@ Examples:
 
     parser.add_argument(
         "command",
-        choices=["auth", "start", "stop", "status", "restart", "run", "callback", "cleanup"],
+        choices=[
+            "auth",
+            "start",
+            "stop",
+            "status",
+            "restart",
+            "run",
+            "callback",
+            "cleanup",
+        ],
         help="Command to execute",
     )
-    
+
     parser.add_argument(
         "service",
         nargs="?",

@@ -33,21 +33,21 @@ class SpotifyServiceManager:
 
     def __init__(self):
         self.project_root = Path(__file__).parent.parent.parent
-        
+
         # Service configurations
         self.services = {
-            'discovery': {
-                'pid_file': self.project_root / "data" / "discovery.pid",
-                'module': "main.py",
-                'args': ["run"],
-                'description': "Discovery Service"
+            "discovery": {
+                "pid_file": self.project_root / "data" / "discovery.pid",
+                "module": "main.py",
+                "args": ["run"],
+                "description": "Discovery Service",
             },
-            'callback': {
-                'pid_file': self.project_root / "data" / "callback.pid", 
-                'module': "main.py",
-                'args': ["callback"],
-                'description': "Callback Server"
-            }
+            "callback": {
+                "pid_file": self.project_root / "data" / "callback.pid",
+                "module": "main.py",
+                "args": ["callback"],
+                "description": "Callback Server",
+            },
         }
 
         # Ensure data directory exists
@@ -57,7 +57,7 @@ class SpotifyServiceManager:
     def _get_pid(self, service_name: str) -> Optional[int]:
         """Get PID from file if exists"""
         try:
-            pid_file = self.services[service_name]['pid_file']
+            pid_file = self.services[service_name]["pid_file"]
             if pid_file.exists():
                 with open(pid_file, "r") as f:
                     return int(f.read().strip())
@@ -68,7 +68,7 @@ class SpotifyServiceManager:
     def _save_pid(self, service_name: str, pid: int) -> None:
         """Save PID to file"""
         try:
-            pid_file = self.services[service_name]['pid_file']
+            pid_file = self.services[service_name]["pid_file"]
             with open(pid_file, "w") as f:
                 f.write(str(pid))
             os.chmod(pid_file, 0o600)  # Secure permissions
@@ -78,7 +78,7 @@ class SpotifyServiceManager:
     def _remove_pid(self, service_name: str) -> None:
         """Remove PID file"""
         try:
-            pid_file = self.services[service_name]['pid_file']
+            pid_file = self.services[service_name]["pid_file"]
             if pid_file.exists():
                 pid_file.unlink()
         except Exception as e:
@@ -90,7 +90,7 @@ class SpotifyServiceManager:
             if service_name not in self.services:
                 logger.error(f"Unknown service: {service_name}")
                 return False
-                
+
             pid = self._get_pid(service_name)
             if not pid:
                 return False
@@ -105,11 +105,11 @@ class SpotifyServiceManager:
                 # Verify it's our service
                 cmdline = process.cmdline()
                 service_config = self.services[service_name]
-                expected_args = service_config['args']
-                
+                expected_args = service_config["args"]
+
                 if not any(
-                    service_config['module'] in str(cmd) or 
-                    any(arg in str(cmd) for arg in expected_args)
+                    service_config["module"] in str(cmd)
+                    or any(arg in str(cmd) for arg in expected_args)
                     for cmd in cmdline
                 ):
                     self._remove_pid(service_name)
@@ -131,9 +131,9 @@ class SpotifyServiceManager:
             if service_name not in self.services:
                 logger.error(f"Unknown service: {service_name}")
                 return False
-                
+
             service_config = self.services[service_name]
-            
+
             # Check if already running
             if self.is_running(service_name):
                 logger.info(f"{service_config['description']} is already running")
@@ -146,7 +146,7 @@ class SpotifyServiceManager:
                 return False
 
             # Build secure command
-            cmd = [python_exe, service_config['module']] + service_config['args']
+            cmd = [python_exe, service_config["module"]] + service_config["args"]
 
             logger.info(f"Starting {service_config['description']}...")
 
@@ -175,7 +175,9 @@ class SpotifyServiceManager:
                 self._remove_pid(service_name)
                 return False
 
-            logger.info(f"{service_config['description']} started successfully (PID: {process.pid})")
+            logger.info(
+                f"{service_config['description']} started successfully (PID: {process.pid})"
+            )
             return True
 
         except Exception as e:
@@ -188,10 +190,10 @@ class SpotifyServiceManager:
             if service_name not in self.services:
                 logger.error(f"Unknown service: {service_name}")
                 return False
-                
+
             service_config = self.services[service_name]
             pid = self._get_pid(service_name)
-            
+
             if not pid:
                 logger.info(f"{service_config['description']} is not running")
                 return True
@@ -233,15 +235,19 @@ class SpotifyServiceManager:
         """Get service status"""
         try:
             if service_name not in self.services:
-                return {"service": service_name, "status": "unknown", "error": "Unknown service"}
-                
+                return {
+                    "service": service_name,
+                    "status": "unknown",
+                    "error": "Unknown service",
+                }
+
             service_config = self.services[service_name]
             is_running = self.is_running(service_name)
             pid = self._get_pid(service_name) if is_running else None
 
             return {
                 "service": service_name,
-                "description": service_config['description'],
+                "description": service_config["description"],
                 "status": "running" if is_running else "stopped",
                 "pid": pid,
             }
@@ -256,7 +262,7 @@ class SpotifyServiceManager:
             service_name: self.status(service_name)
             for service_name in self.services.keys()
         }
-    
+
     def start_all(self) -> bool:
         """Start all services"""
         success = True
@@ -264,7 +270,7 @@ class SpotifyServiceManager:
             if not self.start(service_name):
                 success = False
         return success
-    
+
     def stop_all(self) -> bool:
         """Stop all services"""
         success = True
@@ -285,16 +291,21 @@ class SpotifyServiceManager:
                         and "python" in proc.info["name"].lower()
                         and proc.info["cmdline"]
                         and any(
-                            "main.py" in str(cmd) and 
-                            any(arg in str(cmd) for service_config in self.services.values() 
-                                for arg in service_config['args'])
+                            "main.py" in str(cmd)
+                            and any(
+                                arg in str(cmd)
+                                for service_config in self.services.values()
+                                for arg in service_config["args"]
+                            )
                             for cmd in proc.info["cmdline"]
                         )
                     ):
                         # Check if it's not one of our known processes
-                        known_pids = {self._get_pid(svc) for svc in self.services.keys()}
+                        known_pids = {
+                            self._get_pid(svc) for svc in self.services.keys()
+                        }
                         known_pids.discard(None)  # Remove None values
-                        
+
                         if proc.info["pid"] not in known_pids:
                             logger.info(
                                 f"Found orphaned service process: PID {proc.info['pid']}"
