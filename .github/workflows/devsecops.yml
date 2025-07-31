@@ -108,11 +108,24 @@ jobs:
           source venv/bin/activate
           python -c "
           import sys
+          import os
           sys.path.insert(0, 'src')
           try:
+              # Set dummy Spotify credentials for testing
+              os.environ['SPOTIFY_CLIENT_ID'] = 'test_client_id'
+              os.environ['SPOTIFY_CLIENT_SECRET'] = 'test_client_secret'
+              os.environ['SPOTIFY_REDIRECT_URI'] = 'http://localhost:4444/callback'
+              
               from src.core.config import ConfigManager
               config = ConfigManager()
+              
+              # Test that we can access config methods
+              logging_config = config.get_logging_config()
+              watchdog_config = config.get_watchdog_config()
+              
               print('✅ Configuration loaded successfully')
+              print(f'✅ Logging config loaded: {bool(logging_config)}')
+              print(f'✅ Watchdog config loaded: {bool(watchdog_config)}')
           except Exception as e:
               print(f'❌ Configuration test failed: {e}')
               exit(1)
@@ -123,8 +136,14 @@ jobs:
           source venv/bin/activate
           python -c "
           import sys
+          import os
           sys.path.insert(0, 'src')
           try:
+              # Set dummy Spotify credentials for testing
+              os.environ['SPOTIFY_CLIENT_ID'] = 'test_client_id'
+              os.environ['SPOTIFY_CLIENT_SECRET'] = 'test_client_secret'
+              os.environ['SPOTIFY_REDIRECT_URI'] = 'http://localhost:4444/callback'
+              
               from src.utils.logging_setup import SecureLoggingSetup
               logger = SecureLoggingSetup.get_logger('test')
               logger.info('Test log message')
@@ -139,10 +158,18 @@ jobs:
           source venv/bin/activate
           python -c "
           import sys
+          import os
           sys.path.insert(0, 'src')
           try:
+              # Set dummy Spotify credentials for testing
+              os.environ['SPOTIFY_CLIENT_ID'] = 'test_client_id'
+              os.environ['SPOTIFY_CLIENT_SECRET'] = 'test_client_secret'
+              os.environ['SPOTIFY_REDIRECT_URI'] = 'http://localhost:4444/callback'
+              
               from src.services.watchdog_service import SpotifyWatchdogService
               from src.utils.email_notifier import EmailNotifier
+              from src.services.service_manager import SpotifyServiceManager
+              from src.auth.oauth_manager import SpotifyOAuthManager
               print('✅ All services importable')
           except Exception as e:
               print(f'❌ Service import test failed: {e}')
