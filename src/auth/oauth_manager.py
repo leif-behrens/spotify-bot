@@ -12,11 +12,10 @@ from typing import Optional
 import requests
 
 from ..core.config import ConfigManager
+from ..utils.logging_setup import LoggingSetup
 from .token_storage import SecureTokenStorage
 
-from ..utils.logging_setup import LoggingSetup
-
-logger = LoggingSetup.get_logger(__name__)
+logger = LoggingSetup.get_logger("auth")
 
 
 class SpotifyOAuthManager:

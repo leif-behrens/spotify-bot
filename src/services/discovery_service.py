@@ -20,7 +20,7 @@ from ..core.config import ConfigManager
 from ..utils.logging_setup import LoggingSetup
 
 # Initialize logging
-logger = LoggingSetup.get_logger(__name__)
+logger = LoggingSetup.get_logger("discovery")
 
 
 class SpotifyDiscoveryService:

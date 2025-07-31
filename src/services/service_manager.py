@@ -16,7 +16,7 @@ import psutil
 from ..utils.logging_setup import LoggingSetup
 
 # Initialize logging
-logger = LoggingSetup.get_logger(__name__)
+logger = LoggingSetup.get_logger("service_manager")
 
 
 class SpotifyServiceManager:
@@ -45,6 +45,12 @@ class SpotifyServiceManager:
                 "module": "main.py",
                 "args": ["callback"],
                 "description": "Callback Server",
+            },
+            "watchdog": {
+                "pid_file": self.project_root / "data" / "watchdog.pid",
+                "module": "main.py",
+                "args": ["watchdog"],
+                "description": "Watchdog Service",
             },
         }
 

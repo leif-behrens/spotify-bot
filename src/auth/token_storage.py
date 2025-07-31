@@ -15,7 +15,7 @@ from cryptography.fernet import Fernet
 
 from ..utils.logging_setup import LoggingSetup
 
-logger = LoggingSetup.get_logger(__name__)
+logger = LoggingSetup.get_logger("auth")
 
 
 class SecureTokenStorage:

@@ -14,8 +14,6 @@ from typing import Any, Dict, Optional
 from dotenv import load_dotenv
 from jsonschema import ValidationError, validate
 
-import logging
-
 logger = logging.getLogger(__name__)
 
 CONFIG_SCHEMA = {
@@ -75,8 +73,8 @@ CONFIG_SCHEMA = {
             "type": "object",
             "properties": {
                 "level": {
-                    "type": "string", 
-                    "enum": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+                    "type": "string",
+                    "enum": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
                 },
                 "format": {"type": "string", "minLength": 10},
                 "file_enabled": {"type": "boolean"},
@@ -85,8 +83,75 @@ CONFIG_SCHEMA = {
             },
             "required": ["level", "format", "file_enabled", "console_enabled"],
         },
+        "watchdog": {
+            "type": "object",
+            "properties": {
+                "enabled": {"type": "boolean"},
+                "check_interval_seconds": {
+                    "type": "integer",
+                    "minimum": 10,
+                    "maximum": 300,
+                },
+                "max_restart_attempts": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10,
+                },
+                "restart_cooldown_seconds": {
+                    "type": "integer",
+                    "minimum": 30,
+                    "maximum": 600,
+                },
+                "failure_notification_enabled": {"type": "boolean"},
+                "services_to_monitor": {
+                    "type": "array",
+                    "items": {"type": "string", "enum": ["discovery", "callback"]},
+                    "uniqueItems": True,
+                },
+            },
+            "required": [
+                "enabled",
+                "check_interval_seconds",
+                "max_restart_attempts",
+                "restart_cooldown_seconds",
+                "failure_notification_enabled",
+                "services_to_monitor",
+            ],
+        },
+        "email_notifications": {
+            "type": "object",
+            "properties": {
+                "enabled": {"type": "boolean"},
+                "smtp_server": {"type": "string", "minLength": 5},
+                "smtp_port": {"type": "integer", "minimum": 1, "maximum": 65535},
+                "use_tls": {"type": "boolean"},
+                "sender_email": {"type": "string"},
+                "sender_password": {"type": "string"},
+                "recipient_email": {"type": "string"},
+                "subject_prefix": {"type": "string", "maxLength": 50},
+            },
+            "required": [
+                "enabled",
+                "smtp_server",
+                "smtp_port",
+                "use_tls",
+                "sender_email",
+                "sender_password",
+                "recipient_email",
+                "subject_prefix",
+            ],
+        },
     },
-    "required": ["monitoring", "playlist", "service", "callback_server", "oauth", "logging"],
+    "required": [
+        "monitoring",
+        "playlist",
+        "service",
+        "callback_server",
+        "oauth",
+        "logging",
+        "watchdog",
+        "email_notifications",
+    ],
 }
 
 
@@ -223,3 +288,11 @@ class ConfigManager:
     def get_logging_config(self) -> Dict[str, Any]:
         """Gibt Logging-Konfiguration zurück"""
         return self.config["logging"]
+
+    def get_watchdog_config(self) -> Dict[str, Any]:
+        """Gibt Watchdog-Konfiguration zurück"""
+        return self.config["watchdog"]
+
+    def get_email_notifications_config(self) -> Dict[str, Any]:
+        """Gibt E-Mail-Benachrichtigungs-Konfiguration zurück"""
+        return self.config["email_notifications"]

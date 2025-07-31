@@ -31,7 +31,7 @@
     "log_directory": "logs",
     "max_file_size_mb": 10,
     "backup_count": 5,
-    "console_enabled": true,
+    "console_enabled": false,
     "services": {
       "discovery": {
         "level": "INFO",
@@ -50,7 +50,7 @@
         "file_enabled": true
       },
       "email_notifier": {
-        "level": "DEBUG",
+        "level": "INFO",
         "file_enabled": true
       },
       "auth": {
@@ -80,9 +80,9 @@
     "smtp_server": "smtp.gmail.com",
     "smtp_port": 587,
     "use_tls": true,
-    "sender_email": "monitoring.service.lb@gmail.com",
-    "sender_password": "C476ACCF97B599B5B1BA8861B813478237F482E9905AA7224CB8F9BACF7D88B3",
-    "recipient_email": "behrens.leif@gmail.com",
+    "sender_email": "REPLACE_WITH_YOUR_EMAIL",
+    "sender_password": "REPLACE_WITH_APP_PASSWORD",
+    "recipient_email": "REPLACE_WITH_RECIPIENT_EMAIL",
     "subject_prefix": "[Spotify Bot Alert]"
   }
 }

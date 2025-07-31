@@ -16,10 +16,9 @@ from flask import Flask, jsonify, request
 
 from ..auth.token_storage import SecureTokenStorage
 from ..core.config import ConfigManager
-
 from ..utils.logging_setup import LoggingSetup
 
-logger = LoggingSetup.get_logger(__name__)
+logger = LoggingSetup.get_logger("callback")
 
 
 class SpotifyCallbackServer:

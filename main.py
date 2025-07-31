@@ -16,6 +16,11 @@ from src.auth.oauth_manager import SpotifyOAuthManager
 from src.services.callback_server import SpotifyCallbackServer
 from src.services.discovery_service import SpotifyDiscoveryService
 from src.services.service_manager import SpotifyServiceManager
+from src.services.watchdog_service import SpotifyWatchdogService
+from src.utils.logging_setup import LoggingSetup
+
+# Initialize main application logger
+logger = LoggingSetup.get_logger("main")
 
 
 def handle_auth():
@@ -92,10 +97,7 @@ def handle_service_command(command: str, service_name: str = None):
             time.sleep(2)
             print(f"Starting {service_desc}...")
             success = manager.start(service_name)
-            print(
-                f"{service_desc}: {'restarted' if success else 'failed to restart'}"
-            )
-
+            print(f"{service_desc}: {'restarted' if success else 'failed to restart'}")
 
     except KeyboardInterrupt:
         print("\nShutting down...")
@@ -116,16 +118,22 @@ Examples:
   python main.py auth                    # Authenticate with Spotify
   python main.py start discovery         # Start Discovery Service
   python main.py start callback          # Start Callback Server
+  python main.py start watchdog          # Start Watchdog Service
   python main.py stop discovery          # Stop Discovery Service
   python main.py stop callback           # Stop Callback Server
+  python main.py stop watchdog           # Stop Watchdog Service
   python main.py status                  # Check status of all services
   python main.py status discovery        # Check Discovery Service status only
   python main.py status callback         # Check Callback Server status only
+  python main.py status watchdog         # Check Watchdog Service status only
   python main.py restart discovery       # Restart Discovery Service
   python main.py restart callback        # Restart Callback Server
+  python main.py restart watchdog        # Restart Watchdog Service
   python main.py run                     # Run Discovery Service in foreground
   python main.py callback               # Run Callback Server in foreground
+  python main.py watchdog               # Run Watchdog Service in foreground
   python main.py cleanup                # Clean up orphaned processes
+  python main.py test-email             # Test email notification configuration
         """,
     )
 
@@ -139,7 +147,9 @@ Examples:
             "restart",
             "run",
             "callback",
+            "watchdog",
             "cleanup",
+            "test-email",
         ],
         help="Command to execute",
     )
@@ -147,7 +157,7 @@ Examples:
     parser.add_argument(
         "service",
         nargs="?",
-        choices=["discovery", "callback"],
+        choices=["discovery", "callback", "watchdog"],
         help="Service to manage (required for start/stop/restart, optional for status)",
     )
 
@@ -175,6 +185,27 @@ Examples:
         print("Press Ctrl+C to stop")
         server = SpotifyCallbackServer()
         server._run_server()
+    elif args.command == "watchdog":
+        # Run Watchdog Service directly (foreground)
+        print("Starting Watchdog Service in foreground...")
+        print("Press Ctrl+C to stop")
+        watchdog = SpotifyWatchdogService()
+        watchdog.start()
+        try:
+            while watchdog.is_running:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print("\nShutting down Watchdog...")
+            watchdog.stop()
+    elif args.command == "test-email":
+        # Test email configuration
+        from src.utils.email_notifier import EmailNotifier
+
+        notifier = EmailNotifier()
+        if notifier.test_email_configuration():
+            print("Email test successful!")
+        else:
+            print("Email test failed. Check configuration and logs.")
 
 
 if __name__ == "__main__":

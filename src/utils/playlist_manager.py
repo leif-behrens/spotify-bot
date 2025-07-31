@@ -12,7 +12,7 @@ import spotipy
 
 from .logging_setup import LoggingSetup
 
-logger = LoggingSetup.get_logger(__name__)
+logger = LoggingSetup.get_logger("playlist")
 
 
 class PlaylistManager:
