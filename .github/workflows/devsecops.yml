@@ -156,8 +156,7 @@ jobs:
     needs: [security-quality, build-test]
     if: |
       (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && 
-      github.event_name == 'push' &&
-      secrets.DEPLOY_HOST != ''
+      github.event_name == 'push'
     environment: 
       name: ${{ github.event.inputs.environment || 'production' }}
       url: ${{ vars.APP_URL }}
@@ -176,19 +175,16 @@ jobs:
           echo "✅ Deployment prerequisites check passed"
           
       - name: Setup SSH key
-        if: secrets.DEPLOY_SSH_KEY != ''
         uses: webfactory/ssh-agent@v0.8.0
         with:
           ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
           
       - name: Add Raspberry Pi to known hosts
-        if: secrets.DEPLOY_SSH_KEY != ''
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || echo "Host key scan completed"
           
       - name: Test SSH connection
-        if: secrets.DEPLOY_SSH_KEY != ''
         run: |
           echo "Testing SSH connection to ${{ secrets.DEPLOY_HOST }}..."
           ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} "echo 'SSH connection successful'" || {
@@ -241,7 +237,6 @@ jobs:
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
           
       - name: Deploy application
-        if: secrets.DEPLOY_SSH_KEY != ''
         run: |
           echo "Starting deployment..."
           chmod +x deploy/deploy.sh
@@ -254,7 +249,6 @@ jobs:
           DEPLOY_USER: ${{ env.DEPLOY_USER }}
           
       - name: Verify deployment
-        if: secrets.DEPLOY_SSH_KEY != ''
         run: |
           echo "🔍 Verifying deployment..."
           
@@ -291,8 +285,7 @@ jobs:
     needs: [security-quality, build-test]
     if: |
       !((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && 
-        github.event_name == 'push' &&
-        secrets.DEPLOY_HOST != '')
+        github.event_name == 'push')
     
     steps:
       - name: Explain why deployment was skipped

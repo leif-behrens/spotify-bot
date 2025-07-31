@@ -55,7 +55,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         # Install dev dependencies for complete analysis
-        pip install -r requirements-dev.txt
+        pip install -r requirements-dev.txt || echo "Dev dependencies not required for CodeQL"
 
     - name: 🔨 Autobuild
       uses: github/codeql-action/autobuild@v3
