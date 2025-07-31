@@ -77,12 +77,12 @@
   },
   "email_notifications": {
     "enabled": true,
-    "smtp_server": "smtp.gmail.com",
+    "smtp_server": "",
     "smtp_port": 587,
     "use_tls": true,
-    "sender_email": "monitoring.service.lb@gmail.com",
-    "sender_password": "C476ACCF97B599B5B1BA8861B813478237F482E9905AA7224CB8F9BACF7D88B3",
-    "recipient_email": "behrens.leif@gmail.com",
+    "sender_email": "",
+    "sender_password": "",
+    "recipient_email": "",
     "subject_prefix": "[Spotify Bot Alert]"
   }
 }
