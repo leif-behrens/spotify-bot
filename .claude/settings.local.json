@@ -19,7 +19,14 @@
       "Bash(find:*)",
       "Bash(git commit:*)",
       "Bash(taskkill:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(ls:*)",
+      "Bash(cmd /c:*)",
+      "Bash(start /b python:*)",
+      "Bash(tasklist:*)",
+      "Bash(start /B python:*)",
+      "Bash(wmic:*)",
+      "Bash(mv:*)"
     ],
     "deny": []
   }

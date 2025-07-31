@@ -25,5 +25,5 @@ python-dotenv==1.0.0
 # HTTP client with security features
 requests==2.31.0
 
-# WSGI Server für Production
-gunicorn==21.2.0
+# Process management for service control
+psutil==7.0.0

@@ -1,52 +1,72 @@
-# Spotify Mikroservice-Plattform
+# Spotify Auto-Discovery Bot - Microservices Edition
 
-Eine sicherheitsorientierte Mikroservice-Architektur für Spotify-basierte Services mit zentralem Management-Dashboard.
+Ein sicherer Spotify Bot, der automatisch Songs zu einer Playlist hinzufügt, basierend auf Ihrem Hörverhalten. Implementiert als Microservices-Architektur mit Security-First Ansatz.
 
-## 🎵 Services
+## 🚀 Features
 
-### Verfügbare Services
-- **Discovery Service**: Automatische Musik-Entdeckung basierend auf Hörverhalten
-- **Playlist Sync** *(Coming Soon)*: Playlist-Synchronisation zwischen Konten
-- **Mood Analyzer** *(Coming Soon)*: Stimmungsanalyse der Musik
-- **Recommendation Engine** *(Coming Soon)*: KI-basierte Musikempfehlungen
+- **Automatische Song-Erkennung**: Überwacht Spotify-Wiedergabe und fügt Songs automatisch zu einer Playlist hinzu
+- **Sichere Authentifizierung**: OAuth2-basierte Spotify-Authentifizierung mit verschlüsselter Token-Speicherung
+- **Microservices-Architektur**: Separate Services für verschiedene Funktionen
+- **Web Dashboard**: Benutzerfreundliches Interface zur Service-Verwaltung
+- **Security-First**: Implementiert nach OWASP und OpenSSF Security Standards
 
-### Service Management Dashboard
-- **Start/Stop/Restart**: Einfache Service-Steuerung per Klick
-- **Real-time Monitoring**: Live-Status und Gesundheitsprüfung
-- **Error Tracking**: Fehleranzahl und letzte Fehlermeldungen pro Service
-- **Uptime Monitoring**: Laufzeit-Verfolgung für jeden Service
+## 🏗️ Architektur
 
-## Sicherheitsfeatures
+### Services
 
-- **CWE-798 Prevention**: Keine hardcoded Credentials, Environment Variables
-- **CWE-20 Mitigation**: Input Validation für alle externe Daten
-- **CWE-312 Prevention**: Verschlüsselte Token-Speicherung
-- **CWE-400 Prevention**: Rate Limiting und Resource Management
-- **Bandit-konform**: Alle Security-Tests bestanden
+1. **Callback Service** (`services/callback/`)
+   - Port: 4444
+   - Handles Spotify OAuth callbacks
+   - Provides authentication tokens
 
-## Installation
+2. **Discovery Service** (`services/discovery/`)
+   - Monitors Spotify playback
+   - Adds tracks to target playlist
+   - Requires authentication
 
-1. Virtual Environment erstellen:
+3. **Dashboard** (`dashboard.py`)
+   - Port: 5000
+   - Web-based service management
+   - Real-time status monitoring
+
+## 📋 Voraussetzungen
+
+- Python 3.8+
+- Spotify Developer Account
+- Spotify Premium Account (für Playbook-Monitoring)
+
+## ⚙️ Installation & Setup
+
+### 1. Repository klonen und Dependencies installieren
+
 ```bash
-python -m venv venv
-venv\\Scripts\\activate  # Windows
-source venv/bin/activate  # Linux/Mac
-```
-
-2. Dependencies installieren:
-```bash
+git clone <repository-url>
+cd spotify-bot
 pip install -r requirements.txt
 ```
 
-3. Umgebungsvariablen konfigurieren:
-```bash
-cp .env.template .env
-# .env mit deinen Spotify-Credentials bearbeiten
-```
+### 2. Spotify App erstellen
 
-4. Konfiguration anpassen:
-```bash
-# config.json nach Bedarf bearbeiten
+1. Gehen Sie zu [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+2. Erstellen Sie eine neue App
+3. Notieren Sie sich Client ID und Client Secret
+4. Fügen Sie `http://127.0.0.1:4444/callback` als Redirect URI hinzu
+
+### 3. Environment Variables konfigurieren
+
+Bearbeiten Sie `.env`:
+
+```env
+# Spotify API Credentials
+SPOTIFY_CLIENT_ID=your_client_id_here
+SPOTIFY_CLIENT_SECRET=your_client_secret_here
+SPOTIFY_REDIRECT_URI=http://127.0.0.1:4444/callback
+
+# Flask Configuration
+FLASK_SECRET_KEY=your_secure_secret_key_here
+FLASK_HOST=127.0.0.1
+FLASK_PORT=5000
+FLASK_DEBUG=False
 ```
 
 ## 🚀 Schnellstart
