@@ -170,14 +170,15 @@ class SpotifyOAuthManager:
                     token_info["expires_at"] = time.time() + token_info["expires_in"]
 
                 # Speichere Token sicher
-                if self.token_storage.save_token(token_info):
+                try:
+                    self.token_storage.save_token(token_info)
                     logger.info("✅ Token exchange successful - authorization complete!")
                     print("\n🎉 SUCCESS! Spotify authorization completed!")
                     print("Your bot is now ready to use.")
                     return True
-                else:
-                    logger.error("Failed to save token")
-                    print("❌ Failed to save authorization token")
+                except Exception as e:
+                    logger.error(f"Failed to save token: {e}")
+                    print(f"❌ Failed to save authorization token: {e}")
                     return False
             else:
                 logger.error(f"Token exchange failed: {response.status_code} - {response.text}")
