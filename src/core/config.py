@@ -122,7 +122,7 @@ CONFIG_SCHEMA = {
             "type": "object",
             "properties": {
                 "enabled": {"type": "boolean"},
-                "smtp_server": {"type": "string", "minLength": 5},
+                "smtp_server": {"type": "string"},
                 "smtp_port": {"type": "integer", "minimum": 1, "maximum": 65535},
                 "use_tls": {"type": "boolean"},
                 "sender_email": {"type": "string"},
@@ -295,4 +295,18 @@ class ConfigManager:
 
     def get_email_notifications_config(self) -> Dict[str, Any]:
         """Gibt E-Mail-Benachrichtigungs-Konfiguration zurück"""
-        return self.config["email_notifications"]
+        email_config = self.config["email_notifications"]
+        
+        # Validierung: Wenn E-Mail aktiviert ist, müssen Credentials vorhanden sein
+        if email_config.get("enabled", False):
+            required_fields = ["smtp_server", "sender_email", "sender_password", "recipient_email"]
+            missing_fields = [field for field in required_fields if not email_config.get(field, "").strip()]
+            
+            if missing_fields:
+                logger.warning(f"Email notifications enabled but missing: {', '.join(missing_fields)}")
+                logger.warning("Email notifications will be disabled until credentials are provided")
+                # Erstelle eine Kopie der Konfiguration mit disabled status
+                email_config = email_config.copy()
+                email_config["enabled"] = False
+        
+        return email_config
