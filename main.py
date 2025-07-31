@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 from src.auth.oauth_manager import SpotifyOAuthManager
 from src.services.discovery_service import SpotifyDiscoveryService
 from src.services.service_manager import SpotifyServiceManager
+from src.services.callback_server import SpotifyCallbackServer
 
 
 def handle_auth():
@@ -42,34 +43,58 @@ def handle_auth():
         return False
 
 
-def handle_service_command(command: str):
+def handle_service_command(command: str, service_name: str = None):
     """Handle service management commands"""
     manager = SpotifyServiceManager()
 
     try:
         if command == "start":
-            success = manager.start()
-            print(f"Discovery Service: {'started' if success else 'failed to start'}")
+            if service_name:
+                success = manager.start(service_name)
+                service_desc = manager.services[service_name]['description']
+                print(f"{service_desc}: {'started' if success else 'failed to start'}")
+            else:
+                success = manager.start_all()
+                print(f"All services: {'started' if success else 'some failed to start'}")
 
         elif command == "stop":
-            success = manager.stop()
-            print(f"Discovery Service: {'stopped' if success else 'failed to stop'}")
+            if service_name:
+                success = manager.stop(service_name)
+                service_desc = manager.services[service_name]['description']
+                print(f"{service_desc}: {'stopped' if success else 'failed to stop'}")
+            else:
+                success = manager.stop_all()
+                print(f"All services: {'stopped' if success else 'some failed to stop'}")
 
         elif command == "status":
-            status = manager.status()
-            print(f"Discovery Service: {status['status']}")
-            if status.get("pid"):
-                print(f"PID: {status['pid']}")
+            if service_name:
+                status = manager.status(service_name)
+                print(f"{status['description']}: {status['status']}")
+                if status.get("pid"):
+                    print(f"PID: {status['pid']}")
+            else:
+                all_status = manager.get_all_status()
+                for svc_name, status in all_status.items():
+                    print(f"{status['description']}: {status['status']}")
+                    if status.get("pid"):
+                        print(f"  PID: {status['pid']}")
 
         elif command == "restart":
-            print("Stopping Discovery Service...")
-            manager.stop()
-            time.sleep(2)
-            print("Starting Discovery Service...")
-            success = manager.start()
-            print(
-                f"Discovery Service: {'restarted' if success else 'failed to restart'}"
-            )
+            if service_name:
+                service_desc = manager.services[service_name]['description']
+                print(f"Stopping {service_desc}...")
+                manager.stop(service_name)
+                time.sleep(2)
+                print(f"Starting {service_desc}...")
+                success = manager.start(service_name)
+                print(f"{service_desc}: {'restarted' if success else 'failed to restart'}")
+            else:
+                print("Stopping all services...")
+                manager.stop_all()
+                time.sleep(2)
+                print("Starting all services...")
+                success = manager.start_all()
+                print(f"All services: {'restarted' if success else 'some failed to restart'}")
 
         elif command == "cleanup":
             count = manager.cleanup()
@@ -81,10 +106,20 @@ def handle_service_command(command: str):
             print("Press Ctrl+C to stop")
             service = SpotifyDiscoveryService()
             service.run()
+            
+        elif command == "callback":
+            # Run Callback Server directly (foreground)
+            print("Starting Callback Server in foreground...")
+            print("Press Ctrl+C to stop")
+            server = SpotifyCallbackServer()
+            server._run_server()
 
     except KeyboardInterrupt:
         print("\nShutting down...")
-        manager.stop()
+        if service_name:
+            manager.stop(service_name)
+        else:
+            manager.stop_all()
     except Exception as e:
         print(f"Service command failed: {e}")
         sys.exit(1)
@@ -97,20 +132,34 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python main.py auth          # Authenticate with Spotify
-  python main.py start         # Start Discovery Service
-  python main.py stop          # Stop Discovery Service
-  python main.py status        # Check service status
-  python main.py restart       # Restart Discovery Service
-  python main.py run           # Run Discovery Service in foreground
-  python main.py cleanup       # Clean up orphaned processes
+  python main.py auth                    # Authenticate with Spotify
+  python main.py start                   # Start all services
+  python main.py start discovery         # Start Discovery Service only
+  python main.py start callback          # Start Callback Server only
+  python main.py stop                    # Stop all services
+  python main.py stop discovery          # Stop Discovery Service only
+  python main.py stop callback           # Stop Callback Server only
+  python main.py status                  # Check status of all services
+  python main.py status discovery        # Check Discovery Service status
+  python main.py restart                 # Restart all services
+  python main.py restart callback        # Restart Callback Server only
+  python main.py run                     # Run Discovery Service in foreground
+  python main.py callback               # Run Callback Server in foreground
+  python main.py cleanup                # Clean up orphaned processes
         """,
     )
 
     parser.add_argument(
         "command",
-        choices=["auth", "start", "stop", "status", "restart", "run", "cleanup"],
+        choices=["auth", "start", "stop", "status", "restart", "run", "callback", "cleanup"],
         help="Command to execute",
+    )
+    
+    parser.add_argument(
+        "service",
+        nargs="?",
+        choices=["discovery", "callback"],
+        help="Service to manage (optional - if not specified, applies to all services)",
     )
 
     args = parser.parse_args()
@@ -120,7 +169,7 @@ Examples:
         success = handle_auth()
         sys.exit(0 if success else 1)
     else:
-        handle_service_command(args.command)
+        handle_service_command(args.command, args.service)
 
 
 if __name__ == "__main__":
