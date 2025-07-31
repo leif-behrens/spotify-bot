@@ -176,14 +176,15 @@ jobs:
               exit(1)
           "
 
-  # Deployment Phase - only for main/master branch
+  # Deployment Phase - only for main/master branch with public host
   deploy:
     name: 🚀 Deploy to Raspberry Pi  
     runs-on: ubuntu-latest
     needs: [security-quality, build-test]
     if: |
       (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && 
-      github.event_name == 'push'
+      github.event_name == 'push' &&
+      vars.ENABLE_AUTO_DEPLOY == 'true'
     environment: 
       name: ${{ github.event.inputs.environment || 'production' }}
       url: ${{ vars.APP_URL }}
@@ -307,32 +308,38 @@ jobs:
 
   # Skip deployment notification
   deployment-skipped:
-    name: ℹ️ Deployment Skipped
+    name: ℹ️ Deployment Skipped (Local Network)
     runs-on: ubuntu-latest
     needs: [security-quality, build-test]
     if: |
-      !((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && 
-        github.event_name == 'push')
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && 
+      github.event_name == 'push' &&
+      vars.ENABLE_AUTO_DEPLOY != 'true'
     
     steps:
       - name: Explain why deployment was skipped
         run: |
-          echo "## ℹ️ Deployment Skipped" >> $GITHUB_STEP_SUMMARY
+          echo "## ℹ️ Deployment Skipped - Local Network Setup" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Deployment was skipped because:" >> $GITHUB_STEP_SUMMARY
-          
-          if [[ "${{ github.ref }}" != "refs/heads/main" && "${{ github.ref }}" != "refs/heads/master" ]]; then
-            echo "- Not on main/master branch (current: ${{ github.ref_name }})" >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          if [[ "${{ github.event_name }}" != "push" ]]; then
-            echo "- Not a push event (current: ${{ github.event_name }})" >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          if [[ -z "${{ secrets.DEPLOY_HOST }}" ]]; then
-            echo "- DEPLOY_HOST secret not configured" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**To enable deployment:**" >> $GITHUB_STEP_SUMMARY
-            echo "1. Go to Settings → Secrets and variables → Actions" >> $GITHUB_STEP_SUMMARY
-            echo "2. Add required secrets: DEPLOY_HOST, DEPLOY_SSH_KEY, SENDER_EMAIL, RECIPIENT_EMAIL" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "**Automatic deployment is disabled because:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Raspberry Pi is in local network (not publicly accessible)" >> $GITHUB_STEP_SUMMARY
+          echo "- GitHub Actions cannot reach local devices" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🚀 Deploy manually to your Raspberry Pi:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "# Clone/pull latest code on your Raspberry Pi" >> $GITHUB_STEP_SUMMARY
+          echo "cd /opt/spotify-bot || git clone https://github.com/${{ github.repository }}.git /opt/spotify-bot" >> $GITHUB_STEP_SUMMARY
+          echo "cd /opt/spotify-bot" >> $GITHUB_STEP_SUMMARY
+          echo "git pull origin main" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# Run deployment script locally" >> $GITHUB_STEP_SUMMARY
+          echo "chmod +x deploy/deploy.sh" >> $GITHUB_STEP_SUMMARY
+          echo "DEPLOY_HOST=localhost DEPLOY_USER=\$USER ./deploy/deploy.sh" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Or use the setup script for initial setup:**" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "chmod +x scripts/setup-deployment.sh" >> $GITHUB_STEP_SUMMARY  
+          echo "./scripts/setup-deployment.sh --host localhost" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
