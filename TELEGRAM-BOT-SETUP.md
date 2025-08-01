@@ -29,7 +29,7 @@ Dieses Setup ermöglicht sichere Remote-Verwaltung deines Spotify Bots über Tel
 3. Sende: /newbot
 4. Wähle einen Bot-Namen (z.B. "MySpotifyBot")
 5. Wähle einen Username (z.B. "my_spotify_bot")
-6. Kopiere das Bot Token (Format: 123456789:ABC-DEF1234ghIkl-zyx57W2v1u123ew11)
+6. Kopiere das Bot Token (Format: XXXXXXXXX:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX)
 ```
 
 ### Schritt 2: Chat ID ermitteln
@@ -38,7 +38,7 @@ Dieses Setup ermöglicht sichere Remote-Verwaltung deines Spotify Bots über Tel
 curl "https://api.telegram.org/bot<BOT_TOKEN>/getUpdates"
 
 # Suche in der Antwort nach:
-# "chat":{"id":123456789,"first_name":"Your Name","type":"private"}
+# "chat":{"id":XXXXXXXXX,"first_name":"Your Name","type":"private"}
 # Die Zahl ist deine Chat ID
 ```
 
@@ -47,7 +47,7 @@ curl "https://api.telegram.org/bot<BOT_TOKEN>/getUpdates"
 # Für jeden autorisierten Benutzer:
 # 1. Benutzer sendet Nachricht an Bot
 # 2. Führe getUpdates aus
-# 3. Notiere "from":{"id":987654321} - das ist die User ID
+# 3. Notiere "from":{"id":XXXXXXXXX} - das ist die User ID
 ```
 
 ## 🔧 2. Sichere Konfiguration
@@ -58,9 +58,9 @@ curl "https://api.telegram.org/bot<BOT_TOKEN>/getUpdates"
 nano .env
 
 # Füge diese Werte hinzu (NIEMALS ins GitHub repo!):
-TELEGRAM_BOT_TOKEN=123456789:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
-TELEGRAM_CHAT_ID=123456789
-TELEGRAM_ADMIN_USERS=123456789,987654321,555666777
+TELEGRAM_BOT_TOKEN=YOUR_BOT_TOKEN_FROM_BOTFATHER
+TELEGRAM_CHAT_ID=YOUR_TELEGRAM_CHAT_ID
+TELEGRAM_ADMIN_USERS=YOUR_USER_ID_1,YOUR_USER_ID_2
 TELEGRAM_WEBHOOK_SECRET=your_random_secret_here_min_32_chars
 ```
 
@@ -81,7 +81,7 @@ TELEGRAM_WEBHOOK_SECRET=your_random_secret_here_min_32_chars
 ### Admin-Benutzer konfigurieren
 ```bash
 # Nur diese User IDs können Commands ausführen:
-export TELEGRAM_ADMIN_USERS="123456789,987654321"
+export TELEGRAM_ADMIN_USERS="YOUR_USER_ID_1,YOUR_USER_ID_2"
 
 # Pro-Tipp: Nutze Telegram-Gruppen für Team-Management
 # Gruppenmitglieder können dann alle Commands ausführen
