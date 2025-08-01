@@ -141,6 +141,33 @@ CONFIG_SCHEMA = {
                 "subject_prefix",
             ],
         },
+        "telegram_notifications": {
+            "type": "object",
+            "properties": {
+                "enabled": {"type": "boolean"},
+                "timeout_seconds": {"type": "integer", "minimum": 5, "maximum": 120},
+                "retry_attempts": {"type": "integer", "minimum": 1, "maximum": 5},
+                "retry_delay_seconds": {"type": "integer", "minimum": 1, "maximum": 30},
+                "rate_limit_seconds": {
+                    "type": "integer",
+                    "minimum": 30,
+                    "maximum": 300,
+                },
+                "message_max_length": {
+                    "type": "integer",
+                    "minimum": 100,
+                    "maximum": 4096,
+                },
+            },
+            "required": [
+                "enabled",
+                "timeout_seconds",
+                "retry_attempts",
+                "retry_delay_seconds",
+                "rate_limit_seconds",
+                "message_max_length",
+            ],
+        },
     },
     "required": [
         "monitoring",
@@ -151,6 +178,7 @@ CONFIG_SCHEMA = {
         "logging",
         "watchdog",
         "email_notifications",
+        "telegram_notifications",
     ],
 }
 
@@ -296,17 +324,52 @@ class ConfigManager:
     def get_email_notifications_config(self) -> Dict[str, Any]:
         """Gibt E-Mail-Benachrichtigungs-Konfiguration zurück"""
         email_config = self.config["email_notifications"]
-        
+
         # Validierung: Wenn E-Mail aktiviert ist, müssen Credentials vorhanden sein
         if email_config.get("enabled", False):
-            required_fields = ["smtp_server", "sender_email", "sender_password", "recipient_email"]
-            missing_fields = [field for field in required_fields if not email_config.get(field, "").strip()]
-            
+            required_fields = [
+                "smtp_server",
+                "sender_email",
+                "sender_password",
+                "recipient_email",
+            ]
+            missing_fields = [
+                field
+                for field in required_fields
+                if not email_config.get(field, "").strip()
+            ]
+
             if missing_fields:
-                logger.warning(f"Email notifications enabled but missing: {', '.join(missing_fields)}")
-                logger.warning("Email notifications will be disabled until credentials are provided")
+                logger.warning(
+                    f"Email notifications enabled but missing: {', '.join(missing_fields)}"
+                )
+                logger.warning(
+                    "Email notifications will be disabled until credentials are provided"
+                )
                 # Erstelle eine Kopie der Konfiguration mit disabled status
                 email_config = email_config.copy()
                 email_config["enabled"] = False
-        
+
         return email_config
+
+    def get_telegram_notifications_config(self) -> Dict[str, Any]:
+        """Gibt Telegram-Benachrichtigungs-Konfiguration zurück"""
+        telegram_config = self.config["telegram_notifications"]
+
+        # Validierung: Wenn Telegram aktiviert ist, müssen Credentials vorhanden sein
+        if telegram_config.get("enabled", False):
+            bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+            chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+
+            if not bot_token or not chat_id:
+                logger.warning(
+                    "Telegram notifications enabled but missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID"
+                )
+                logger.warning(
+                    "Telegram notifications will be disabled until credentials are provided"
+                )
+                # Erstelle eine Kopie der Konfiguration mit disabled status
+                telegram_config = telegram_config.copy()
+                telegram_config["enabled"] = False
+
+        return telegram_config

@@ -13,6 +13,7 @@ from ..core.config import ConfigManager
 from ..utils.email_notifier import EmailNotifier
 from ..utils.logging_setup import LoggingSetup
 from .service_manager import SpotifyServiceManager
+from .telegram_service import TelegramService
 
 logger = LoggingSetup.get_logger("watchdog")
 
@@ -82,6 +83,7 @@ class SpotifyWatchdogService:
         self.watchdog_config = self.config_manager.get_watchdog_config()
         self.service_manager = SpotifyServiceManager()
         self.email_notifier = EmailNotifier()
+        self.telegram_service = TelegramService(self.config_manager)
 
         # Service Health Tracking
         self.service_health: Dict[str, ServiceHealthInfo] = {}
@@ -231,6 +233,18 @@ class SpotifyWatchdogService:
                 if health_info.failure_notified and self.notification_enabled:
                     self.email_notifier.send_service_recovery_notification(service_name)
 
+                    # Telegram Recovery-Benachrichtigung
+                    if health_info.last_failure_time:
+                        downtime_minutes = int(
+                            (
+                                datetime.now() - health_info.last_failure_time
+                            ).total_seconds()
+                            / 60
+                        )
+                        self.telegram_service.send_service_recovery(
+                            service_name, downtime_minutes
+                        )
+
                 health_info.reset_failure_count()
 
         else:
@@ -274,6 +288,13 @@ class SpotifyWatchdogService:
                         max_attempts=self.max_restart_attempts,
                     )
 
+                    # Telegram Permanent-Failure-Benachrichtigung
+                    self.telegram_service.send_watchdog_failure(
+                        service_name=service_name,
+                        failure_count=health_info.restart_attempts,
+                        max_retries=self.max_restart_attempts,
+                    )
+
                 health_info.failure_notified = True
             return
 
@@ -312,6 +333,13 @@ class SpotifyWatchdogService:
                     failure_reason=f"Multiple restart attempts failed ({health_info.restart_attempts} attempts)",
                     restart_attempts=health_info.restart_attempts,
                     max_attempts=self.max_restart_attempts,
+                )
+
+                # Telegram Multiple-Failures-Benachrichtigung
+                self.telegram_service.send_watchdog_failure(
+                    service_name=service_name,
+                    failure_count=health_info.restart_attempts,
+                    max_retries=self.max_restart_attempts,
                 )
 
     def reset_service_health(self, service_name: str) -> bool:

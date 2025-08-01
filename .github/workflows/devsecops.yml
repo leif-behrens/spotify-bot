@@ -36,46 +36,46 @@ jobs:
   security-quality:
     name: 🔒 Security & Quality
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-          
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          
+
       - name: Cache pip dependencies
         uses: actions/cache@v3
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          
+
       - name: Install security tools
         run: |
           pip install bandit safety flake8 mypy || echo "Some tools failed to install, continuing..."
-          
+
       - name: Run Bandit Security Scanner
         run: |
           echo "Running Bandit security analysis..."
           bandit -r src/ --severity-level medium || echo "Bandit found issues but continuing..."
-          
+
       - name: Run Safety Check
         run: |
           echo "Checking dependencies for vulnerabilities..."
           safety check || echo "Safety found vulnerabilities but continuing..."
-          
+
       - name: Run Flake8 Linting
         run: |
           echo "Running code style checks..."
           flake8 src/ --max-line-length=120 --ignore=E501,W503,F401,E402 || echo "Linting issues found but continuing..."
-          
+
       - name: Run Type Check
         run: |
           echo "Running type analysis..."
@@ -86,23 +86,23 @@ jobs:
     name: 🔨 Build & Test
     runs-on: ubuntu-latest
     needs: security-quality
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          
+
       - name: Create virtual environment
         run: |
           python -m venv venv
           source venv/bin/activate
           pip install --upgrade pip
           pip install -r requirements.txt
-          
+
       - name: Test configuration loading
         run: |
           source venv/bin/activate
@@ -115,14 +115,14 @@ jobs:
               os.environ['SPOTIFY_CLIENT_ID'] = 'test_client_id'
               os.environ['SPOTIFY_CLIENT_SECRET'] = 'test_client_secret'
               os.environ['SPOTIFY_REDIRECT_URI'] = 'http://localhost:4444/callback'
-              
+
               from src.core.config import ConfigManager
               config = ConfigManager()
-              
+
               # Test that we can access config methods
               logging_config = config.get_logging_config()
               watchdog_config = config.get_watchdog_config()
-              
+
               print('✅ Configuration loaded successfully')
               print(f'✅ Logging config loaded: {bool(logging_config)}')
               print(f'✅ Watchdog config loaded: {bool(watchdog_config)}')
@@ -130,7 +130,7 @@ jobs:
               print(f'❌ Configuration test failed: {e}')
               exit(1)
           "
-          
+
       - name: Test logging system
         run: |
           source venv/bin/activate
@@ -143,7 +143,7 @@ jobs:
               os.environ['SPOTIFY_CLIENT_ID'] = 'test_client_id'
               os.environ['SPOTIFY_CLIENT_SECRET'] = 'test_client_secret'
               os.environ['SPOTIFY_REDIRECT_URI'] = 'http://localhost:4444/callback'
-              
+
               from src.utils.logging_setup import SecureLoggingSetup
               logger = SecureLoggingSetup.get_logger('test')
               logger.info('Test log message')
@@ -152,7 +152,7 @@ jobs:
               print(f'❌ Logging test failed: {e}')
               exit(1)
           "
-          
+
       - name: Test service imports
         run: |
           source venv/bin/activate
@@ -165,34 +165,66 @@ jobs:
               os.environ['SPOTIFY_CLIENT_ID'] = 'test_client_id'
               os.environ['SPOTIFY_CLIENT_SECRET'] = 'test_client_secret'
               os.environ['SPOTIFY_REDIRECT_URI'] = 'http://localhost:4444/callback'
-              
+
               from src.services.watchdog_service import SpotifyWatchdogService
               from src.utils.email_notifier import EmailNotifier
               from src.services.service_manager import SpotifyServiceManager
               from src.auth.oauth_manager import SpotifyOAuthManager
+              from src.services.telegram_service import TelegramService
               print('✅ All services importable')
           except Exception as e:
               print(f'❌ Service import test failed: {e}')
               exit(1)
           "
 
+      - name: Test Telegram service configuration
+        run: |
+          source venv/bin/activate
+          python -c "
+          import sys
+          import os
+          sys.path.insert(0, 'src')
+          try:
+              # Set dummy credentials for testing
+              os.environ['SPOTIFY_CLIENT_ID'] = 'test_client_id'
+              os.environ['SPOTIFY_CLIENT_SECRET'] = 'test_client_secret'
+              os.environ['SPOTIFY_REDIRECT_URI'] = 'http://localhost:4444/callback'
+
+              from src.core.config import ConfigManager
+              config = ConfigManager()
+
+              # Test Telegram config loading (without credentials)
+              telegram_config = config.get_telegram_notifications_config()
+              print(f'✅ Telegram config loaded: {bool(telegram_config)}')
+              print(f'✅ Telegram enabled: {telegram_config.get(\"enabled\", False)}')
+
+              # Test TelegramService initialization without credentials (should disable gracefully)
+              from src.services.telegram_service import TelegramService
+              telegram_service = TelegramService(config)
+              print(f'✅ TelegramService initialized (enabled: {telegram_service.enabled})')
+
+          except Exception as e:
+              print(f'❌ Telegram configuration test failed: {e}')
+              exit(1)
+          "
+
   # Deployment Phase - only for main/master branch with public host
   deploy:
-    name: 🚀 Deploy to Raspberry Pi  
+    name: 🚀 Deploy to Raspberry Pi
     runs-on: ubuntu-latest
     needs: [security-quality, build-test]
     if: |
-      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && 
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') &&
       github.event_name == 'push' &&
       vars.ENABLE_AUTO_DEPLOY == 'true'
-    environment: 
+    environment:
       name: ${{ github.event.inputs.environment || 'production' }}
       url: ${{ vars.APP_URL }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Check deployment prerequisites
         run: |
           if [[ -z "${{ secrets.DEPLOY_HOST }}" ]]; then
@@ -201,17 +233,17 @@ jobs:
             exit 1
           fi
           echo "✅ Deployment prerequisites check passed"
-          
+
       - name: Setup SSH key
         uses: webfactory/ssh-agent@v0.8.0
         with:
           ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
-          
+
       - name: Add Raspberry Pi to known hosts
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || echo "Host key scan completed"
-          
+
       - name: Test SSH connection
         run: |
           echo "Testing SSH connection to ${{ secrets.DEPLOY_HOST }}..."
@@ -223,26 +255,26 @@ jobs:
             echo "3. User 'pi' exists and SSH is enabled"
             exit 1
           }
-          
+
       - name: Create production configuration
         run: |
           echo "Creating production configuration..."
           cp config/config.json config/config.production.json
-          
+
           # Update production settings securely without exposing secrets
           python3 << 'EOF'
           import json
           import os
-          
+
           try:
               with open('config/config.production.json', 'r') as f:
                   config = json.load(f)
-              
+
               # Update for production
               config['callback_server']['debug'] = False
               config['logging']['level'] = 'INFO'
               config['logging']['console_enabled'] = False
-              
+
               # Update email settings if secrets are available
               if os.getenv('SMTP_PASSWORD'):
                   config['email_notifications']['sender_password'] = os.getenv('SMTP_PASSWORD')
@@ -250,10 +282,10 @@ jobs:
                   config['email_notifications']['sender_email'] = os.getenv('SENDER_EMAIL')
               if os.getenv('RECIPIENT_EMAIL'):
                   config['email_notifications']['recipient_email'] = os.getenv('RECIPIENT_EMAIL')
-              
+
               with open('config/config.production.json', 'w') as f:
                   json.dump(config, f, indent=2)
-              
+
               print("✅ Production configuration created")
           except Exception as e:
               print(f"❌ Configuration creation failed: {e}")
@@ -263,7 +295,7 @@ jobs:
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
-          
+
       - name: Deploy application
         run: |
           echo "Starting deployment..."
@@ -275,11 +307,11 @@ jobs:
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ env.DEPLOY_USER }}
-          
+
       - name: Verify deployment
         run: |
           echo "🔍 Verifying deployment..."
-          
+
           ssh ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} "
             if sudo systemctl is-active --quiet spotify-bot; then
               echo '✅ Service is running'
@@ -293,12 +325,12 @@ jobs:
             echo "❌ Deployment verification failed"
             exit 1
           }
-          
+
       - name: Create deployment summary
         if: success()
         run: |
           echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- **Target**: ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" >> $GITHUB_STEP_SUMMARY  
+          echo "- **Target**: ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Environment**: ${{ github.event.inputs.environment || 'production' }}" >> $GITHUB_STEP_SUMMARY
@@ -312,10 +344,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: [security-quality, build-test]
     if: |
-      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && 
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') &&
       github.event_name == 'push' &&
       vars.ENABLE_AUTO_DEPLOY != 'true'
-    
+
     steps:
       - name: Explain why deployment was skipped
         run: |
@@ -340,6 +372,6 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Or use the setup script for initial setup:**" >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
-          echo "chmod +x scripts/setup-deployment.sh" >> $GITHUB_STEP_SUMMARY  
+          echo "chmod +x scripts/setup-deployment.sh" >> $GITHUB_STEP_SUMMARY
           echo "./scripts/setup-deployment.sh --host localhost" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY

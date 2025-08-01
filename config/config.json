@@ -64,6 +64,10 @@
       "service_manager": {
         "level": "INFO",
         "file_enabled": true
+      },
+      "telegram": {
+        "level": "INFO",
+        "file_enabled": true
       }
     }
   },
@@ -84,5 +88,13 @@
     "sender_password": "",
     "recipient_email": "",
     "subject_prefix": "[Spotify Bot Alert]"
+  },
+  "telegram_notifications": {
+    "enabled": true,
+    "timeout_seconds": 30,
+    "retry_attempts": 3,
+    "retry_delay_seconds": 5,
+    "rate_limit_seconds": 60,
+    "message_max_length": 4096
   }
 }
