@@ -31,7 +31,7 @@
     "log_directory": "logs",
     "max_file_size_mb": 10,
     "backup_count": 5,
-    "console_enabled": true,
+    "console_enabled": false,
     "services": {
       "discovery": {
         "level": "INFO",
@@ -68,6 +68,10 @@
       "telegram": {
         "level": "INFO",
         "file_enabled": true
+      },
+      "telegram_bot": {
+        "level": "INFO",
+        "file_enabled": true
       }
     }
   },
@@ -95,6 +99,9 @@
     "retry_attempts": 3,
     "retry_delay_seconds": 5,
     "rate_limit_seconds": 60,
-    "message_max_length": 4096
+    "message_max_length": 4096,
+    "command_bot_enabled": true,
+    "max_commands_per_hour": 20,
+    "command_timeout_seconds": 30
   }
 }

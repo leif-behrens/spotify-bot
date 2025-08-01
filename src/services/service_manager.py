@@ -52,6 +52,12 @@ class SpotifyServiceManager:
                 "args": ["watchdog"],
                 "description": "Watchdog Service",
             },
+            "telegram-bot": {
+                "pid_file": self.project_root / "data" / "telegram-bot.pid",
+                "module": "main.py",
+                "args": ["telegram-bot"],
+                "description": "Telegram Command Bot",
+            },
         }
 
         # Ensure data directory exists

@@ -33,7 +33,7 @@ def handle_auth():
 
         if oauth_manager.ensure_valid_token():
             print("\n[SUCCESS] Spotify authorization is ready!")
-            print("You can now start the Discovery Service with: python main.py start")
+            print("You can now start services with: python main.py start <service>")
             return True
         else:
             print("\n[ERROR] Spotify authorization failed!")
@@ -56,7 +56,9 @@ def handle_service_command(command: str, service_name: str = None):
         if command == "start":
             if not service_name:
                 print("Error: Service name is required for start command")
-                print("Usage: python main.py start {discovery|callback}")
+                print(
+                    "Usage: python main.py start {discovery|callback|watchdog|telegram-bot}"
+                )
                 sys.exit(1)
             success = manager.start(service_name)
             service_desc = manager.services[service_name]["description"]
@@ -65,7 +67,9 @@ def handle_service_command(command: str, service_name: str = None):
         elif command == "stop":
             if not service_name:
                 print("Error: Service name is required for stop command")
-                print("Usage: python main.py stop {discovery|callback}")
+                print(
+                    "Usage: python main.py stop {discovery|callback|watchdog|telegram-bot}"
+                )
                 sys.exit(1)
             success = manager.stop(service_name)
             service_desc = manager.services[service_name]["description"]
@@ -89,7 +93,9 @@ def handle_service_command(command: str, service_name: str = None):
         elif command == "restart":
             if not service_name:
                 print("Error: Service name is required for restart command")
-                print("Usage: python main.py restart {discovery|callback}")
+                print(
+                    "Usage: python main.py restart {discovery|callback|watchdog|telegram-bot}"
+                )
                 sys.exit(1)
             service_desc = manager.services[service_name]["description"]
             print(f"Stopping {service_desc}...")
@@ -119,21 +125,27 @@ Examples:
   python main.py start discovery         # Start Discovery Service
   python main.py start callback          # Start Callback Server
   python main.py start watchdog          # Start Watchdog Service
+  python main.py start telegram-bot      # Start Telegram Command Bot
   python main.py stop discovery          # Stop Discovery Service
   python main.py stop callback           # Stop Callback Server
   python main.py stop watchdog           # Stop Watchdog Service
+  python main.py stop telegram-bot       # Stop Telegram Command Bot
   python main.py status                  # Check status of all services
   python main.py status discovery        # Check Discovery Service status only
   python main.py status callback         # Check Callback Server status only
   python main.py status watchdog         # Check Watchdog Service status only
+  python main.py status telegram-bot     # Check Telegram Command Bot status only
   python main.py restart discovery       # Restart Discovery Service
   python main.py restart callback        # Restart Callback Server
   python main.py restart watchdog        # Restart Watchdog Service
+  python main.py restart telegram-bot    # Restart Telegram Command Bot
   python main.py run                     # Run Discovery Service in foreground
   python main.py callback               # Run Callback Server in foreground
   python main.py watchdog               # Run Watchdog Service in foreground
+  python main.py telegram-bot           # Run Telegram Command Bot in foreground
   python main.py cleanup                # Clean up orphaned processes
   python main.py test-email             # Test email notification configuration
+  python main.py test-telegram-bot      # Test Telegram Command Bot configuration
         """,
     )
 
@@ -148,8 +160,10 @@ Examples:
             "run",
             "callback",
             "watchdog",
+            "telegram-bot",
             "cleanup",
             "test-email",
+            "test-telegram-bot",
         ],
         help="Command to execute",
     )
@@ -157,7 +171,7 @@ Examples:
     parser.add_argument(
         "service",
         nargs="?",
-        choices=["discovery", "callback", "watchdog"],
+        choices=["discovery", "callback", "watchdog", "telegram-bot"],
         help="Service to manage (required for start/stop/restart, optional for status)",
     )
 
@@ -197,6 +211,59 @@ Examples:
         except KeyboardInterrupt:
             print("\nShutting down Watchdog...")
             watchdog.stop()
+    elif args.command == "telegram-bot":
+        # Run Telegram Command Bot directly (foreground)
+        print("Starting Telegram Command Bot in foreground...")
+        print("Press Ctrl+C to stop")
+        from src.core.config import ConfigManager
+        from src.services.telegram_command_bot import TelegramCommandBot
+
+        config_manager = ConfigManager()
+        bot = TelegramCommandBot(config_manager)
+
+        if not bot.enabled:
+            print("ERROR: Telegram Command Bot is disabled or misconfigured")
+            print("Please check your configuration and environment variables:")
+            print("- TELEGRAM_BOT_TOKEN")
+            print("- TELEGRAM_CHAT_ID")
+            print("- TELEGRAM_ADMIN_USERS (comma-separated user IDs)")
+            sys.exit(1)
+
+        try:
+            print("Telegram Command Bot is running...")
+            print("Send /help to the bot for available commands")
+            bot.start_polling()
+        except KeyboardInterrupt:
+            print("\nShutting down Telegram Command Bot...")
+    elif args.command == "test-telegram-bot":
+        # Test Telegram Command Bot configuration
+        print("Testing Telegram Command Bot configuration...")
+        from src.core.config import ConfigManager
+        from src.services.telegram_command_bot import TelegramCommandBot
+
+        config_manager = ConfigManager()
+        bot = TelegramCommandBot(config_manager)
+
+        if bot.enabled:
+            print("SUCCESS: Telegram Command Bot configuration is valid")
+            print(f"   Admin users: {len(bot.admin_user_ids)}")
+            print(f"   Available commands: {len(bot.allowed_commands)}")
+            print(f"   Rate limit: {bot.max_commands_per_hour} commands/hour")
+
+            # Send test message to verify connectivity
+            if bot._send_response(
+                int(bot.chat_id),
+                "Test: Telegram Command Bot test message - Configuration OK!",
+            ):
+                print("SUCCESS: Test message sent successfully")
+            else:
+                print(
+                    "ERROR: Failed to send test message - check bot token and chat ID"
+                )
+                sys.exit(1)
+        else:
+            print("ERROR: Telegram Command Bot is disabled or misconfigured")
+            sys.exit(1)
     elif args.command == "test-email":
         # Test email configuration
         from src.utils.email_notifier import EmailNotifier
