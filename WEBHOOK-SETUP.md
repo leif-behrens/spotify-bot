@@ -27,7 +27,7 @@ certbot --nginx -d your-domain.com
 ### 2. Webhook in Telegram registrieren
 ```bash
 # Bot Token aus .env nehmen
-BOT_TOKEN="8090653802:AAH5i90kruJ5ObNcFyeAFyDXEPS7nu6MfzU"
+BOT_TOKEN="YOUR_BOT_TOKEN_HERE"
 WEBHOOK_URL="https://your-domain.com/webhook/$BOT_TOKEN"
 SECRET="MySecureWebhookSecret2024_MinLength32Chars!"
 
